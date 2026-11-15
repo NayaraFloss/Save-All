@@ -317,6 +317,24 @@ export function mensagensPedidosLoja({ pedidos = [], lojaId, agora = new Date() 
     })
 }
 
+// A loja é avisada quando o cliente cancela o pedido (antes de sair para entrega).
+export function mensagensCancelamentoLoja({ pedidos = [], lojaId, agora = new Date() } = {}) {
+  return pedidos
+    .filter((p) => p.status === 'cancelled' && (!lojaId || p.lojaId === lojaId) && pedidoRecente(p, agora))
+    .map((p) => ({
+      id: `pedido-cancelado-${p.id}`,
+      tipo: 'pedido-cancelado',
+      prioridade: 'alta',
+      icone: 'cancel',
+      titulo: `Pedido #${p.id} cancelado`,
+      texto:
+        `${p.nomeCliente || 'O cliente'} cancelou o pedido #${p.id} (${moeda(p.total || 0)}).` +
+        `${p.motivoCancelamento ? ` Motivo: ${p.motivoCancelamento}.` : ''} Não é preciso preparar nem entregar.`,
+      criadaEm: p.canceladoEm,
+      acao: { rota: 'PainelLoja', consulta: { aba: 'orders' }, rotulo: 'Ver pedidos' },
+    }))
+}
+
 // Texto de cada situação do pedido, do ponto de vista do cliente.
 const SITUACOES_CLIENTE = {
   accepted: { titulo: 'Pedido aceito', icone: 'thumb_up', texto: (p) => `${p.nomeLoja || 'O estabelecimento'} aceitou o seu pedido #${p.id}.` },
@@ -401,6 +419,7 @@ export function mensagensDoPerfil({
       const lojaId = String(usuario.id || '').replace('user-', '')
       return [
         ...mensagensPedidosLoja({ pedidos, lojaId, agora }),
+        ...mensagensCancelamentoLoja({ pedidos, lojaId, agora }),
         ...mensagensRespostaDoacaoLoja({ ofertas, lojaId, agora }),
         ...mensagensLoja({ foods, lojaId, agora }),
       ]

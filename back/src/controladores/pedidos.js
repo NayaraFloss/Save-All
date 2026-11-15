@@ -392,8 +392,17 @@ export async function atualizar(req, res) {
       const de = FLUXO.indexOf(p.status);
       const para = FLUXO.indexOf(novo);
       if (novo === "cancelled") {
+        // Só o cliente do pedido cancela, e apenas até o pedido sair para entrega.
+        if (!ehCliente)
+          throw new ErroHttp(
+            403,
+            "Somente o cliente que fez o pedido pode cancelá-lo.",
+          );
         if (!["pending", "accepted", "preparing"].includes(p.status))
-          throw new ErroHttp(400, "Este pedido não pode mais ser cancelado.");
+          throw new ErroHttp(
+            400,
+            "Este pedido já saiu para entrega e não pode mais ser cancelado.",
+          );
       } else if (para === -1) {
         throw new ErroHttp(400, "Status inválido.");
       } else if (para <= de) {
@@ -408,7 +417,25 @@ export async function atualizar(req, res) {
       }
       add("status", novo);
       // Pedido cancelado: o que saiu do estoque volta para o(s) lote(s) de origem.
-      if (novo === "cancelled") await devolverEstoqueDoPedido(db, p.id);
+      if (novo === "cancelled") {
+        await devolverEstoqueDoPedido(db, p.id);
+        // Registra quando e por quê (a loja vê o motivo no aviso de cancelamento).
+        const motivo = texto(c.motivoCancelamento, {
+          campo: "motivo do cancelamento",
+          max: 300,
+          obrigatorio: false,
+        });
+        valores.push(
+          JSON.stringify({
+            canceladoEm: new Date().toISOString(),
+            canceladoPor: "cliente",
+            ...(motivo ? { motivoCancelamento: motivo } : {}),
+          }),
+        );
+        sets.push(
+          `extras = COALESCE(extras, '{}'::jsonb) || $${valores.length}::jsonb`,
+        );
+      }
       if (novo === "delivered" && !p.entregue_em)
         add("entregue_em", new Date().toISOString());
     }

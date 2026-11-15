@@ -13,7 +13,12 @@ const ehHoje = (iso) => {
   return data.getFullYear() === hoje.getFullYear() && data.getMonth() === hoje.getMonth() && data.getDate() === hoje.getDate();
 };
 const pedidosDaFase = (status) =>
-  props.storeOrders.filter((o) => o.status === status && (status !== "delivered" || ehHoje(o.entregueEm || o.date)));
+  props.storeOrders.filter(
+    (o) =>
+      o.status === status &&
+      (status !== "delivered" || ehHoje(o.entregueEm || o.date)) &&
+      (status !== "cancelled" || ehHoje(o.canceladoEm || o.date)),
+  );
 const filteredOrders = computed(() => pedidosDaFase(orderPipelineTab.value));
 const getCount = (status) => pedidosDaFase(status).length;
 // Botão do WhatsApp em cada pedido: abre a mensagem pronta da situação atual
@@ -58,6 +63,7 @@ const enviarWhatsapp = (order) => {
         <q-tab name="preparing" :label="`No Preparo (${getCount('preparing')})`" class="text-weight-bold" />
         <q-tab name="delivery" :label="`A Caminho (${getCount('delivery')})`" class="text-weight-bold" />
         <q-tab name="delivered" :label="`Entregues hoje (${getCount('delivered')})`" class="text-weight-bold" />
+        <q-tab name="cancelled" :label="`Cancelados (${getCount('cancelled')})`" class="text-weight-bold" />
       </q-tabs>
     </q-card>
 
@@ -68,9 +74,11 @@ const enviarWhatsapp = (order) => {
           <span v-if="orderPipelineTab === 'pending'">💤</span>
           <span v-else-if="orderPipelineTab === 'preparing'">👩‍🍳</span>
           <span v-else-if="orderPipelineTab === 'delivery'">🛵</span>
+          <span v-else-if="orderPipelineTab === 'cancelled'">🚫</span>
           <span v-else>✅</span>
         </div>
         <div v-if="orderPipelineTab === 'delivered'" class="text-caption text-grey-6">Nenhum pedido entregue hoje. Os pedidos de dias anteriores ficam no Relatório.</div>
+        <div v-else-if="orderPipelineTab === 'cancelled'" class="text-caption text-grey-6">Nenhum pedido cancelado hoje. Quando um cliente cancelar, você é avisado e o pedido aparece aqui.</div>
         <div v-else class="text-caption text-grey-6">Nenhum pedido nesta fase no momento. Os pedidos dos clientes aparecem aqui assim que são feitos.</div>
 
       </q-card-section>
@@ -106,6 +114,13 @@ const enviarWhatsapp = (order) => {
               class="text-weight-bold"
               :label="`🛵 A CAMINHO #${order.id}`"
             />
+            <q-badge
+              v-else-if="orderPipelineTab === 'cancelled'"
+              outline
+              color="negative"
+              class="text-weight-bold"
+              :label="`🚫 CANCELADO PELO CLIENTE #${order.id}`"
+            />
             <q-badge v-else outline color="grey-7" class="text-weight-bold" :label="`Pedido #${order.id}`" />
 
             <div class="row items-center no-wrap q-gutter-x-sm q-mt-sm">
@@ -134,6 +149,14 @@ const enviarWhatsapp = (order) => {
         </div>
       </q-card-section>
 
+      <q-card-section v-if="order.status === 'cancelled'" class="q-pt-none">
+        <q-banner dense rounded class="bg-red-1 text-negative text-caption">
+          <template #avatar><q-icon name="cancel" color="negative" /></template>
+          O cliente cancelou este pedido. Não é preciso preparar nem entregar.
+          <span v-if="order.motivoCancelamento"><br><strong>Motivo:</strong> {{ order.motivoCancelamento }}</span>
+        </q-banner>
+      </q-card-section>
+
       <!-- Order Items -->
       <q-card-section class="q-pt-none">
         <div class="order-items rounded-borders q-pa-md">
@@ -150,7 +173,7 @@ const enviarWhatsapp = (order) => {
       </q-card-section>
 
       <!-- Action Button for status transitions -->
-      <q-card-actions v-if="order.status !== 'delivered'" class="q-px-md q-pb-md q-pt-none">
+      <q-card-actions v-if="order.status !== 'delivered' && order.status !== 'cancelled'" class="q-px-md q-pb-md q-pt-none">
         <q-btn
           class="full-width text-weight-bold"
           unelevated

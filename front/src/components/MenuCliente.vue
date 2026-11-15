@@ -10,7 +10,7 @@ const router = useRouter();
 const { orders } = storeToRefs(useAppStore());
 const appStore = useAppStore();
 
-const pedidosEmAndamento = computed(() => orders.value.filter((o) => o.status !== "delivered").length);
+const pedidosEmAndamento = computed(() => orders.value.filter((o) => o.status !== "delivered" && o.status !== "cancelled").length);
 
 const abaAtiva = computed(() => {
   switch (route.name) {

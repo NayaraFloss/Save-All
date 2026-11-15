@@ -37,8 +37,9 @@ const handleOpenRating = (order) => {
 };
 let intervalId = null;
 // Todos os pedidos que ainda não foram entregues ficam em andamento e podem ser acompanhados
-const activeOrders = computed(() => orders.value.filter((o) => o.status !== "delivered"));
-const completedOrders = computed(() => orders.value.filter((o) => o.status === "delivered"));
+const activeOrders = computed(() => orders.value.filter((o) => o.status !== "delivered" && o.status !== "cancelled"));
+// Finalizados: entregues e cancelados
+const completedOrders = computed(() => orders.value.filter((o) => o.status === "delivered" || o.status === "cancelled"));
 const showAllCompletedOrders = ref(false);
 let hasInitializedSelection = false;
 const initOrderSelection = () => {
@@ -98,6 +99,10 @@ const getStatusBadgeLabel = (status) => {
   switch (status) {
     case "pending":
       return "Pedido Feito";
+    case "accepted":
+      return "Pedido aceito";
+    case "cancelled":
+      return "Cancelado";
     case "preparing":
       return "Sendo preparado";
     case "delivery":
@@ -108,6 +113,25 @@ const getStatusBadgeLabel = (status) => {
       return status;
   }
 };
+// Cancelamento: o cliente pode cancelar até o pedido sair para entrega
+const podeCancelar = (pedido) => ["pending", "accepted", "preparing"].includes(pedido?.status);
+const pedidoParaCancelar = ref(null);
+const motivoCancelamento = ref("");
+const cancelando = ref(false);
+const abrirCancelamento = (pedido) => {
+  pedidoParaCancelar.value = pedido;
+  motivoCancelamento.value = "";
+};
+const confirmarCancelamento = async () => {
+  const pedido = pedidoParaCancelar.value;
+  if (!pedido || cancelando.value) return;
+  cancelando.value = true;
+  const motivo = motivoCancelamento.value.trim();
+  const ok = await updateOrderStatus(pedido.id, "cancelled", motivo ? { motivoCancelamento: motivo } : undefined);
+  cancelando.value = false;
+  pedidoParaCancelar.value = null;
+  if (ok) selectedOrderId.value = null;
+};
 const handleConfirmReceipt = async (ord) => {
   if (!ord || ord.status !== "delivery") return;
   await updateOrderStatus(ord.id, "delivered");
@@ -116,9 +140,14 @@ const handleConfirmReceipt = async (ord) => {
   appStore.abrirAvaliacao(deliveredOrd);
 };
 const contarFase = (status) => orders.value.filter((o) => o.status === status).length;
+// "Pedido feito" também inclui os já aceitos pela loja
+const contarPedidoFeito = () => orders.value.filter((o) => o.status === "pending" || o.status === "accepted").length;
 const filteredActiveOrders = computed(() => {
   return activeOrders.value.filter((o) => {
-    if (!["all", "active"].includes(orderFilter.value) && o.status !== orderFilter.value) return false;
+    if (!["all", "active"].includes(orderFilter.value)) {
+      const fase = o.status === "accepted" ? "pending" : o.status;
+      if (fase !== orderFilter.value) return false;
+    }
     if (!searchQuery.value.trim()) return true;
     const q = searchQuery.value.toLowerCase().trim();
     return o.id.toLowerCase().includes(q) || o.nomeLoja.toLowerCase().includes(q) || o.items.some((i) => i.name.toLowerCase().includes(q));
@@ -231,7 +260,7 @@ const formatItemName = (name) => {
           >
             <q-tab v-if="modoAcompanhar" id="filter-orders-active" name="active" icon="list_alt" :label="`Todos (${activeOrders.length})`" class="text-weight-bold" />
             <q-tab v-else id="filter-orders-all" name="all" icon="list_alt" :label="`Todos (${orders.length})`" class="text-weight-bold" />
-            <q-tab id="filter-orders-pending" name="pending" icon="receipt_long" :label="`Pedido feito (${contarFase('pending')})`" class="text-weight-bold" />
+            <q-tab id="filter-orders-pending" name="pending" icon="receipt_long" :label="`Pedido feito (${contarPedidoFeito()})`" class="text-weight-bold" />
             <q-tab id="filter-orders-preparing" name="preparing" icon="soup_kitchen" :label="`Preparando (${contarFase('preparing')})`" class="text-weight-bold" />
             <q-tab id="filter-orders-delivery" name="delivery" icon="local_shipping" :label="`A caminho (${contarFase('delivery')})`" class="text-weight-bold" />
             <!-- Entregues: também no Acompanhar, para o cliente ver e avaliar o que já chegou -->
@@ -370,6 +399,24 @@ const formatItemName = (name) => {
                     </div>
                   </template>
 
+                  <!-- Cancelamento: disponível até o pedido sair para entrega -->
+                  <template v-if="podeCancelar(o)">
+                    <q-separator />
+                    <div class="column items-center text-center q-gutter-y-xs">
+                      <q-btn
+                        :id="`btn-cancel-order-${o.id}`"
+                        outline
+                        no-caps
+                        color="negative"
+                        icon="cancel"
+                        class="text-weight-bold"
+                        label="Cancelar pedido"
+                        @click="abrirCancelamento(o)"
+                      />
+                      <div class="text-caption text-grey-6">Você pode cancelar até o pedido sair para entrega.</div>
+                    </div>
+                  </template>
+
                   <!-- Campo Pedidos -->
                   <q-card flat bordered class="summary-card">
                     <q-card-section class="q-gutter-y-sm">
@@ -442,7 +489,12 @@ const formatItemName = (name) => {
                   <div class="col ellipsis-container">
                     <div class="row items-center q-gutter-x-sm">
                       <span class="text-caption text-weight-bold font-mono text-grey-8">Pedido #{{ o.id }}</span>
-                      <q-badge color="grey-4" text-color="grey-8" class="text-uppercase" label="Entregue" />
+                      <q-badge
+                        :color="o.status === 'cancelled' ? 'negative' : 'grey-4'"
+                        :text-color="o.status === 'cancelled' ? 'white' : 'grey-8'"
+                        class="text-uppercase"
+                        :label="o.status === 'cancelled' ? 'Cancelado' : 'Entregue'"
+                      />
                     </div>
                     <div class="text-caption text-weight-bold ellipsis q-mt-xs">{{ o.nomeLoja }}</div>
                     <div class="text-caption text-grey-6 ellipsis">
@@ -453,8 +505,12 @@ const formatItemName = (name) => {
                       {{ new Date(o.date).toLocaleDateString('pt-BR') }} · {{ o.items.length }} {{ o.items.length === 1 ? 'item' : 'itens' }}
                     </div>
 
+                    <div v-if="o.status === 'cancelled'" class="row items-center no-wrap q-gutter-x-xs q-mt-sm text-negative text-caption text-weight-bold">
+                      <q-icon name="cancel" size="16px" />
+                      <span>Pedido cancelado por você{{ o.motivoCancelamento ? `: ${o.motivoCancelamento}` : '.' }}</span>
+                    </div>
                     <!-- Etapas do pedido (todas concluídas) -->
-                    <div class="pipeline row no-wrap items-start q-mt-sm">
+                    <div v-else class="pipeline row no-wrap items-start q-mt-sm">
                       <template v-for="(st, idx) in timelineSteps" :key="st.step">
                         <div class="pipeline__etapa column items-center text-center">
                           <q-avatar size="26px" font-size="15px" :icon="st.icon" color="positive" text-color="white" />
@@ -485,8 +541,8 @@ const formatItemName = (name) => {
               <template v-if="selectedCompletedOrderId === o.id">
                 <q-separator />
                 <q-card-section class="q-gutter-y-md details-section">
-                  <!-- Avaliação -->
-                  <q-card flat bordered>
+                  <!-- Avaliação (pedido cancelado não é avaliado) -->
+                  <q-card v-if="o.status === 'delivered'" flat bordered>
                     <q-card-section class="q-pa-sm">
                       <div v-if="o.notaComida" class="q-gutter-y-sm">
                         <div class="row items-center justify-between">
@@ -633,6 +689,38 @@ const formatItemName = (name) => {
     </div>
 
     <!-- Modal de avaliação -->
+    <!-- Confirmação de cancelamento -->
+    <q-dialog :model-value="!!pedidoParaCancelar" persistent @update:model-value="(v) => { if (!v) pedidoParaCancelar = null }">
+      <q-card id="dialog-cancelar-pedido" style="width: 420px; max-width: 92vw">
+        <q-card-section class="row items-center no-wrap q-gutter-x-sm">
+          <q-avatar icon="cancel" color="negative" text-color="white" size="40px" />
+          <div>
+            <div class="text-subtitle1 text-weight-bold">Cancelar pedido #{{ pedidoParaCancelar?.id }}?</div>
+            <div class="text-caption text-grey-7">A loja será avisada e o pedido não será entregue.</div>
+          </div>
+        </q-card-section>
+        <q-card-section class="q-pt-none">
+          <q-input
+            id="input-motivo-cancelamento"
+            v-model="motivoCancelamento"
+            outlined
+            dense
+            autogrow
+            maxlength="300"
+            label="Motivo (opcional)"
+            placeholder="Ex.: pedi por engano, mudei de endereço..."
+          />
+          <div class="text-caption text-grey-6 q-mt-sm">
+            Depois que o pedido sair para entrega, não será mais possível cancelar.
+          </div>
+        </q-card-section>
+        <q-card-actions align="right" class="q-pa-md">
+          <q-btn id="btn-cancelar-voltar" flat no-caps color="grey-7" label="Manter pedido" :disable="cancelando" @click="pedidoParaCancelar = null" />
+          <q-btn id="btn-cancelar-confirmar" unelevated no-caps color="negative" class="text-weight-bold" label="Sim, cancelar" :loading="cancelando" @click="confirmarCancelamento" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
     <AvaliacaoPedidoModal
       :show="showRatingModal"
       :order="selectedRatingOrder"

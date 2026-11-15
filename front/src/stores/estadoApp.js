@@ -5,7 +5,7 @@ import { authService } from 'src/services/servicoAutenticacao'
 import { foodService } from 'src/services/servicoAlimentos'
 import { orderService } from 'src/services/servicoPedidos'
 import { storeService } from 'src/services/servicoLojas'
-import { canEvaluateOrder, getOrderDeliveryTimestamp } from 'src/utils/utilitariosAvaliacaoPedido'
+import { canEvaluateOrder } from 'src/utils/utilitariosAvaliacaoPedido'
 import { CITIES, storeBelongsToCity, cidadesComAlimentos } from 'src/utils/cidades'
 import { armazem } from 'src/services/armazemServidor'
 
@@ -41,43 +41,41 @@ export const useAppStore = defineStore('app', () => {
   const pedirInicio = () => {
     inicioSinal.value += 1
   }
-  // Pedido recém-entregue a ser avaliado: a janela de avaliação abre em qualquer tela (ver LayoutPrincipal)
+  // Pedido recém-entregue a ser avaliado: a janela de avaliação abre em qualquer tela (ver LayoutPrincipal).
+  // Abre SEMPRE que há um pedido entregue ainda não oferecido para avaliação (mesmo que o app tenha sido
+  // aberto depois da entrega). A pessoa pode escolher não avaliar; a lista de pedidos já oferecidos fica
+  // salva no servidor para a janela não reaparecer em outro aparelho nem depois de recarregar.
   const pedidoParaAvaliar = ref(null)
+  const avaliacoesOferecidas = () => armazem.dado('avaliacoesOferecidas', []).map(String)
+  const marcarAvaliacaoOferecida = (id) => {
+    const lista = avaliacoesOferecidas()
+    if (!lista.includes(String(id))) {
+      armazem.salvarDado('avaliacoesOferecidas', [...lista, String(id)].slice(-200))
+    }
+  }
   const abrirAvaliacao = (pedido) => {
     if (pedido) pedidoParaAvaliar.value = pedido
   }
   const fecharAvaliacao = () => {
+    if (pedidoParaAvaliar.value) marcarAvaliacaoOferecida(pedidoParaAvaliar.value.id)
     pedidoParaAvaliar.value = null
   }
-  // Avaliações que o cliente dispensou (fechou no X ou já enviou). Ficam salvas no servidor
-  // (tabela dados_usuario), então valem em qualquer aparelho. Quem não clica em nada continua vendo.
-  const idsAvaliacoesDispensadas = () =>
-    armazem.dado('avaliacoes_dispensadas', { ids: [] }).ids || []
-  const dispensarAvaliacao = (id) => {
-    const ids = idsAvaliacoesDispensadas().map(String)
-    if (ids.includes(String(id))) return
-    armazem.salvarDado('avaliacoes_dispensadas', { ids: [...ids, String(id)].slice(-200) })
-  }
-  const dispensarAvaliacaoAtual = () => {
-    if (pedidoParaAvaliar.value) dispensarAvaliacao(pedidoParaAvaliar.value.id)
-    pedidoParaAvaliar.value = null
-  }
-  // Abre a avaliação do pedido entregue há até 1 hora que ainda não foi avaliado nem dispensado.
-  // Roda toda vez que os pedidos são carregados: pega a entrega na hora e também quando o app é aberto de novo.
   const detectarEntregas = (lista) => {
     if (pedidoParaAvaliar.value) return
-    const dispensadas = idsAvaliacoesDispensadas().map(String)
-    const pendentes = lista
-      .filter(
-        (ord) =>
-          ord.status === 'delivered' &&
-          !ord.notaComida &&
-          canEvaluateOrder(ord) &&
-          !dispensadas.includes(String(ord.id)),
-      )
-      .sort((a, b) => (getOrderDeliveryTimestamp(b) || 0) - (getOrderDeliveryTimestamp(a) || 0))
-    if (pendentes.length) pedidoParaAvaliar.value = pendentes[0]
+    const oferecidas = avaliacoesOferecidas()
+    const pendente = (lista || []).find(
+      (ord) =>
+        ord.status === 'delivered' &&
+        !ord.notaComida &&
+        canEvaluateOrder(ord) &&
+        !oferecidas.includes(String(ord.id)),
+    )
+    if (pendente) pedidoParaAvaliar.value = pendente
   }
+  // Qualquer atualização da lista de pedidos (polling do layout ou da central de mensagens) passa por aqui
+  watch(orders, (lista) => {
+    if (usuarioAtual.value?.role === 'client') detectarEntregas(lista)
+  })
   const loading = ref(false)
   const error = ref(null)
   const currentScreen = ref('welcome')
@@ -97,8 +95,7 @@ export const useAppStore = defineStore('app', () => {
     const prefs = armazem.dado('preferencias', {})
     if (typeof prefs.modoEscuro === 'boolean') modoEscuro.value = prefs.modoEscuro
     if (typeof prefs.notificacoes === 'boolean') notificationsEnabled.value = prefs.notificacoes
-    // Cidade salva que não é mais atendida (ex.: São Paulo) volta para Pinhalzinho
-    if (typeof prefs.cidade === 'string' && CITIES.includes(prefs.cidade)) selectedCity.value = prefs.cidade
+    if (typeof prefs.cidade === 'string' && prefs.cidade) selectedCity.value = prefs.cidade
   }
   // Busca no servidor os dados do usuário (coleções e preferências) antes de abrir as telas.
   const carregarDadosDoUsuario = async (user) => {
@@ -149,14 +146,7 @@ export const useAppStore = defineStore('app', () => {
     error.value = null
     const routePath = screenToRoute[screen]
     if (routePath && appRouter) {
-      // Se a tela não abrir (ex.: arquivo .vue faltando ou com erro), avisa em vez de ficar parado
-      appRouter.push(routePath).catch((erro) => {
-        console.error(`[navegação] não foi possível abrir ${routePath}:`, erro)
-        triggerNotification(
-          `Não foi possível abrir a tela (${routePath}). Veja o erro no terminal do "quasar dev" ou no Console (F12).`,
-          'error',
-        )
-      })
+      appRouter.push(routePath).catch(() => {})
     }
   }
   const alternarModoEscuro = () => {
@@ -455,7 +445,6 @@ export const useAppStore = defineStore('app', () => {
         isStore ? usuarioAtual.value.id.replace('user-', '') : void 0,
       )
       orders.value = list
-      if (isClient) detectarEntregas(list)
       pedidosCarregados.value = true
     } catch (err) {
       console.error('Error loading orders:', err)
@@ -481,9 +470,7 @@ export const useAppStore = defineStore('app', () => {
         nomeLoja: cartStoreName.value,
         items: cart.value,
         // Sacola Surpresa: a visão do cliente esconde a loja e os produtos
-        ...(cart.value.length > 0 && cart.value.every((item) => item.surpresa)
-          ? { surpresa: true }
-          : {}),
+        ...(cart.value.length > 0 && cart.value.every((item) => item.surpresa) ? { surpresa: true } : {}),
         subtotal,
         taxaEntrega,
         descontoPontos,
@@ -516,13 +503,20 @@ export const useAppStore = defineStore('app', () => {
     try {
       await orderService.updateOrderStatus(id, newStatus, extraFields)
       await loadOrders()
-      triggerNotification(`Status do pedido atualizado para: ${newStatus}`, 'success')
+      triggerNotification(
+        newStatus === 'cancelled'
+          ? 'Pedido cancelado. A loja foi avisada.'
+          : `Status do pedido atualizado para: ${newStatus}`,
+        newStatus === 'cancelled' ? 'info' : 'success',
+      )
       const freshUser = await authService.getCurrentUser()
       if (freshUser) {
         usuarioAtual.value = freshUser
       }
+      return true
     } catch (err) {
       triggerNotification(err.message, 'error')
+      return false
     } finally {
       loading.value = false
     }
@@ -567,7 +561,6 @@ export const useAppStore = defineStore('app', () => {
     pedidoParaAvaliar,
     abrirAvaliacao,
     fecharAvaliacao,
-    dispensarAvaliacaoAtual,
     inicioSinal,
     pedirInicio,
     usuarioAtual,
