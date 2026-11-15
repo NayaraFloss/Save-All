@@ -1,0 +1,153 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+:root {
+  --font-display: 'Outfit', sans-serif;
+  --font-mono: 'Fira Code', monospace;
+  --brand-green: #66bb6a;
+  --brand-green-light: #a5d6a7;
+  --brand-orange: #ffa726;
+  --brand-yellow: #fff59d;
+  --brand-gray: #f5f5f5;
+  --brand-dark: #0f1c24;
+  --brand-dark-card: #182c39;
+}
+
+body {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-display { font-family: var(--font-display); }
+.font-mono { font-family: var(--font-mono); }
+
+// ---------------------------------------------------------------
+// Layout responsivo
+//  - celular (até 448px): ocupa 100% da largura, sem rolagem horizontal
+//  - telas maiores: coluna de celular centralizada (shell-phone) ou
+//    largura ampla (shell-wide) para os painéis administrativos
+// ---------------------------------------------------------------
+// O Quasar não tem classes de margem "auto"; definimos aqui as usadas no projeto
+.q-mx-auto { margin-left: auto !important; margin-right: auto !important; }
+.q-ml-auto { margin-left: auto !important; }
+.q-mr-auto { margin-right: auto !important; }
+
+// Campos dentro de linhas flex podem encolher (evita estourar a largura no celular)
+.q-field.col, .q-field.col-grow, .row.no-wrap > .q-field { min-width: 0; }
+.q-field__native, .q-field__control { min-width: 0; }
+
+// Conteúdo de q-scroll-area nunca passa da largura da área (evita corte à direita no celular)
+.q-scrollarea__content { max-width: 100% !important; width: 100%; }
+
+// 'clip' evita rolagem lateral sem criar um contêiner de rolagem (mantém sticky funcionando)
+html, body { overflow-x: clip; }
+img, video { max-width: 100%; }
+
+.shell-full { --shell-max: 100%; }
+.shell-fluid { --shell-max: 100%; }
+.shell-wide { --shell-max: 1280px; }
+
+// Tela fluida: celular 100% → tablet 760px → notebook 1120px → monitor 1280px
+@media (min-width: 600px) { .shell-fluid { --shell-max: 760px; } }
+@media (min-width: 1024px) { .shell-fluid { --shell-max: 1120px; } }
+@media (min-width: 1440px) { .shell-fluid { --shell-max: 1280px; } }
+
+.app-shell,
+.app-toolbar {
+  width: 100%;
+  max-width: var(--shell-max, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.app-shell {
+  min-height: calc(100vh - 50px);
+  min-width: 0;
+  .q-page { min-width: 0; }
+}
+
+// Páginas com fundo sustentável: o desenho fica atrás de todo o conteúdo
+.q-page:has(> .fundo-sustentavel) { position: relative; isolation: isolate; }
+
+// Em telas maiores o conteúdo ganha um "fundo" e uma sombra suave
+@media (min-width: 600px) {
+  .shell-fluid {
+    .q-page-container { background: #e9edf0; }
+    .app-shell { background: #f5f7f8; box-shadow: 0 0 24px rgba(0, 0, 0, 0.12); }
+  }
+  .shell-full .app-shell { background: #f5f7f8; }
+  .body--dark .shell-fluid, .body--dark .shell-full {
+    .q-page-container { background: #02070b; }
+    .app-shell { background: #040c13; box-shadow: 0 0 24px rgba(0, 0, 0, 0.6); }
+  }
+}
+
+// Utilitário: lista de cartões que vira grade no notebook
+.desk-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 760px) { .desk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .desk-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .desk-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+// Celulares estreitos (320–360px): barra superior compacta
+@media (max-width: 380px) {
+  .app-toolbar { padding: 0 8px; }
+  .role-chip { max-width: 120px; .q-chip__content { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } }
+}
+
+.role-chip .chip-name { max-width: 180px; }
+
+// Barra superior: título à esquerda, slot central (cidade) e ações à direita
+.header-title { flex: 0 0 auto; min-width: 0; }
+.header-logo { width: 34px; height: 34px; flex: none; }
+.header-slot-center { flex: 1 1 0; min-width: 0; padding: 0 8px; }
+@media (max-width: 599px) {
+  .header-title { font-size: 16px; }
+}
+
+// Barras de rolagem
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+// Impressão (relatórios)
+@media print {
+  body { background: white !important; color: #0f172a !important; }
+
+  .no-print,
+  .q-header,
+  .q-footer,
+  .q-drawer,
+  .q-btn,
+  .no-print-element { display: none !important; }
+
+  .q-page-container { padding: 0 !important; }
+
+  .printable-report-area {
+    display: block !important;
+    background: white !important;
+    color: #0f172a !important;
+    padding: 20px !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+
+    * {
+      color: #0f172a !important;
+      background-color: transparent !important;
+      border-color: #cbd5e1 !important;
+      text-shadow: none !important;
+      box-shadow: none !important;
+    }
+  }
+
+  .print-metric-card {
+    border: 2px solid #e2e8f0 !important;
+    background-color: #f8fafc !important;
+    border-radius: 8px !important;
+    page-break-inside: avoid;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

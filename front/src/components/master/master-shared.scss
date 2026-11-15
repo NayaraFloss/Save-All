@@ -1,0 +1,43 @@
+// Estilos compartilhados entre os componentes do Painel Master.
+@mixin tone($c) {
+  background: rgba($c, 0.1);
+  border: 1px solid rgba($c, 0.45);
+}
+
+.m-tone-amber {
+  @include tone(#ffa726);
+}
+.m-tone-green {
+  @include tone(#43a047);
+}
+.m-tone-red {
+  @include tone(#e53935);
+}
+.m-tone-blue {
+  @include tone(#1e88e5);
+}
+
+.m-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.m-tiny {
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+.m-mono {
+  font-family: var(--font-mono, monospace);
+}
+.m-dashed {
+  border-style: dashed;
+}
+.m-pulse {
+  animation: m-pulse 1.6s ease-in-out infinite;
+}
+@keyframes m-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}

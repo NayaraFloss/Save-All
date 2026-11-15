@@ -1,0 +1,169 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+:root {
+  --font-display: 'Outfit', sans-serif;
+  --font-mono: 'Fira Code', monospace;
+  --brand-green: #66bb6a;
+  --brand-green-light: #a5d6a7;
+  --brand-orange: #ffa726;
+  --brand-yellow: #fff59d;
+  --brand-gray: #f5f5f5;
+  --brand-dark: #0f1c24;
+  --brand-dark-card: #182c39;
+}
+
+body {
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-display { font-family: var(--font-display); }
+.font-mono { font-family: var(--font-mono); }
+
+// ---------------------------------------------------------------
+// Layout responsivo
+//  - todas as telas ocupam a largura e a altura inteiras da janela
+//  - a rolagem acontece só dentro da área de conteúdo (.app-shell) e
+//    só aparece quando o conteúdo realmente não cabe na tela
+// ---------------------------------------------------------------
+// O Quasar não tem classes de margem "auto"; definimos aqui as usadas no projeto
+.q-mx-auto { margin-left: auto !important; margin-right: auto !important; }
+.q-ml-auto { margin-left: auto !important; }
+.q-mr-auto { margin-right: auto !important; }
+
+// Campos dentro de linhas flex podem encolher (evita estourar a largura no celular)
+.q-field.col, .q-field.col-grow, .row.no-wrap > .q-field { min-width: 0; }
+.q-field__native, .q-field__control { min-width: 0; }
+
+// Conteúdo de q-scroll-area nunca passa da largura da área (evita corte à direita no celular)
+.q-scrollarea__content { max-width: 100% !important; width: 100%; }
+
+// 'clip' evita rolagem lateral sem criar um contêiner de rolagem (mantém sticky funcionando)
+html, body { overflow-x: clip; }
+img, video { max-width: 100%; }
+
+// Largura total em qualquer tamanho de tela
+.shell-full, .shell-fluid, .shell-wide { --shell-max: 100%; }
+
+.app-shell,
+.app-toolbar {
+  width: 100%;
+  max-width: var(--shell-max, 100%);
+}
+
+// Altura: o contêiner ocupa exatamente a janela (descontada a barra verde, que o
+// Quasar compensa com padding-top). A janela em si nunca rola.
+.q-layout > .q-page-container {
+  height: 100vh;
+  height: 100dvh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+// Área de conteúdo: única barra de rolagem, que só aparece se a tela não couber.
+// O espaço do menu fixo do cliente entra como padding (definido no LayoutPrincipal).
+.app-shell {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+
+  // A página preenche a altura disponível e só cresce se o conteúdo for maior
+  > .q-page {
+    flex: 1 0 auto;
+    min-width: 0;
+    min-height: 0 !important;
+  }
+}
+
+// Páginas com fundo sustentável: o desenho fica atrás de todo o conteúdo
+.q-page:has(> .fundo-sustentavel) { position: relative; isolation: isolate; }
+
+// Fundo único em toda a largura (sem as faixas cinzas laterais)
+.app-shell { background: #f5f7f8; }
+.body--dark .app-shell { background: #040c13; }
+
+// Utilitário: lista de cartões que vira grade no notebook
+.desk-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+@media (min-width: 760px) { .desk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .desk-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .desk-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+// Celulares estreitos (320–360px): barra superior compacta
+@media (max-width: 380px) {
+  .app-toolbar { padding: 0 8px; }
+  .role-chip { max-width: 120px; .q-chip__content { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } }
+}
+
+.role-chip .chip-name { max-width: 180px; }
+
+// Barra superior: título à esquerda, slot central (cidade) e ações à direita
+.header-title { flex: 0 0 auto; min-width: 0; }
+.header-logo { width: 34px; height: 34px; flex: none; }
+.header-slot-center { flex: 1 1 0; min-width: 0; padding: 0 8px; }
+@media (max-width: 599px) {
+  .header-title { font-size: 16px; }
+}
+
+// Barras de rolagem
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+// Impressão (relatórios)
+@media print {
+  body { background: white !important; color: #0f172a !important; }
+
+  .no-print,
+  .q-header,
+  .q-footer,
+  .q-drawer,
+  .q-btn,
+  .no-print-element { display: none !important; }
+
+  .q-page-container { padding: 0 !important; }
+
+  // Na impressão o conteúdo volta a fluir normalmente (sem a área de rolagem)
+  .q-layout > .q-page-container,
+  .app-shell {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .printable-report-area {
+    display: block !important;
+    background: white !important;
+    color: #0f172a !important;
+    padding: 20px !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+
+    * {
+      color: #0f172a !important;
+      background-color: transparent !important;
+      border-color: #cbd5e1 !important;
+      text-shadow: none !important;
+      box-shadow: none !important;
+    }
+  }
+
+  .print-metric-card {
+    border: 2px solid #e2e8f0 !important;
+    background-color: #f8fafc !important;
+    border-radius: 8px !important;
+    page-break-inside: avoid;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
