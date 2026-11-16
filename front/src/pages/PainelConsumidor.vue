@@ -21,7 +21,6 @@ const appStore = useAppStore();
 const { usuarioAtual, stores, foods, modoEscuro, notificationsEnabled, selectedCity } = storeToRefs(appStore);
 const {
   logout,
-  loadOrders,
   setSelectedCity,
   storeBelongsToCity,
   alternarModoEscuro,
