@@ -18,6 +18,7 @@ import ConfiguracaoFrete from "../components/store/ConfiguracaoFrete.vue";
 import { prepararImagemQuadrada } from "src/utils/imagens";
 import RelatorioMensalView from "../components/RelatorioMensalView.vue";
 import ResumoInicioLoja from "../components/store/ResumoInicioLoja.vue";
+import TermosRelatorio from "../components/store/TermosRelatorio.vue";
 import MenuLoja from "../components/store/MenuLoja.vue";
 import ContadoresLoja from "../components/store/ContadoresLoja.vue";
 import AvaliacoesRecebidas from "../components/store/AvaliacoesRecebidas.vue";
@@ -684,6 +685,15 @@ const totalAvaliacoes = computed(
                   :disposals="disposalLogs"
                   parte="certificados"
                 />
+              </q-expansion-item>
+              <q-expansion-item
+                dense
+                expand-separator
+                icon="gavel"
+                label="Termos de doação e de descarte"
+                header-class="text-weight-bold"
+              >
+                <TermosRelatorio :modoEscuro="modoEscuro" :disposals="disposalLogs" />
               </q-expansion-item>
             </template>
           </RelatorioMensalView>
