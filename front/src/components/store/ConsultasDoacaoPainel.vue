@@ -5,7 +5,7 @@ import { useAppStore } from "../../stores/estadoApp";
 import BlocoAssinatura from "./BlocoAssinatura.vue";
 import { abrirWhatsapp, telefoneValido } from "../../utils/whatsapp";
 defineProps({ lojaId: String, modoEscuro: Boolean });
-const emit = defineEmits(["open-wizard", "select-offer", "proceed-donation", "doar-outra-entidade"]);
+const emit = defineEmits(["open-wizard", "select-offer", "proceed-donation", "doar-outra-entidade", "entrega-confirmada"]);
 const appStore = useAppStore();
 const { triggerNotification } = appStore;
 const offers = ref([]);
@@ -212,6 +212,8 @@ const confirmarEntrega = () => {
       triggerNotification("Entrega registrada! Doa\xE7\xE3o finalizada e contabilizada nos relat\xF3rios.", "success");
       ofertaParaEntregar.value = null;
       loadOffers();
+      // A loja baixa o lote do estoque e registra a doação nos relatórios e no certificado
+      emit("entrega-confirmada", entregue);
       // Próximo passo: agradecer a entidade e mandar o link de avaliação (vale 1 hora)
       ofertaParaAgradecer.value = entregue;
     } catch (erro) {

@@ -20,7 +20,6 @@ import RelatorioMensalView from "../components/RelatorioMensalView.vue";
 import ResumoInicioLoja from "../components/store/ResumoInicioLoja.vue";
 import MenuLoja from "../components/store/MenuLoja.vue";
 import ContadoresLoja from "../components/store/ContadoresLoja.vue";
-import { prepararParaDestinar } from "../utils/lotesVencidos";
 import AvaliacoesRecebidas from "../components/store/AvaliacoesRecebidas.vue";
 import AlertasVencimentoLoja from "../components/store/AlertasVencimentoLoja.vue";
 import { servicoDoacoes } from "../services/servicoDoacoes";
@@ -36,7 +35,6 @@ const { usuarioAtual, foods, orders, modoEscuro, stores } = storeToRefs(appStore
 const {
   updateFoodItem,
   removeFoodItem,
-  baixarVencidosDoItem,
   setEditingFood,
   updateOrderStatus,
   updateProfile,
@@ -67,8 +65,7 @@ const handleSavePricingConfig = (config) => {
   }
 };
 const handleTriggerDisposalFromPricing = (food) => {
-  // Item com lote vencido: a doação leva só as sacolas vencidas
-  selectedFoodToDispose.value = prepararParaDestinar(food);
+  selectedFoodToDispose.value = food;
   initialDisposalType.value = "donation";
   initialDisposalStep.value = 1;
   showDisposalWizard.value = true;
@@ -308,24 +305,82 @@ const handleSaveStoreProfileChanges = async (e) => {
     pfxFileData: pfxFileData.value
   });
 };
+// Baixa do estoque o que foi doado/descartado, lote a lote. Se o item tem lote vencido, só os
+// lotes vencidos saem (os lotes ainda bons continuam à venda); sem lote vencido, sai a quantidade
+// informada, do lote que vence primeiro. Quando não sobra lote, o item é removido do catálogo.
+const baixarEstoqueDoDestino = async (itens) => {
+  const hoje = new Date().toLocaleDateString("en-CA");
+  const dia = (d) => String(d || "").slice(0, 10);
+  for (const item of itens) {
+    const alimento = foods.value.find((f) => f.id === item.foodId);
+    // O servidor recusa mexer em alimentos de outro estabelecimento
+    if (!alimento || String(alimento.lojaId) !== String(loggedInStoreId.value)) continue;
+    const lotes = (alimento.lotes?.length
+      ? alimento.lotes
+      : [{ quantity: alimento.quantity, dataFabricacao: alimento.dataFabricacao, dataValidade: alimento.dataValidade }]
+    )
+      .map((l) => ({ quantity: Number(l.quantity) || 0, dataFabricacao: l.dataFabricacao, dataValidade: l.dataValidade }))
+      .sort((a, b) => dia(a.dataValidade).localeCompare(dia(b.dataValidade)));
+    const vencidos = lotes.filter((l) => dia(l.dataValidade) && dia(l.dataValidade) < hoje);
+    const alvo = vencidos.length ? vencidos : lotes;
+    let restante = Number(item.quantity) > 0 ? Number(item.quantity) : alvo.reduce((s, l) => s + l.quantity, 0);
+    for (const lote of alvo) {
+      if (restante <= 0) break;
+      const tira = Math.min(lote.quantity, restante);
+      lote.quantity -= tira;
+      restante -= tira;
+    }
+    const sobra = lotes.filter((l) => l.quantity > 0);
+    if (!sobra.length) await removeFoodItem(item.foodId);
+    else await updateFoodItem(item.foodId, { lotes: sobra });
+  }
+};
+const itensDoRegistro = (log) =>
+  log.itensLote?.length
+    ? log.itensLote.map((i) => ({ foodId: i.foodId, quantity: i.quantity }))
+    : [{ foodId: log.foodId, quantity: log.quantity }];
 const handleCompletedDisposal = async (log) => {
   disposalLogs.value.unshift(log);
-  // Só tira do catálogo alimentos desta loja (o servidor recusa apagar os de outro estabelecimento).
-  // Em lote (vários itens selecionados), todos os itens do lote saem do catálogo.
-  // Itens enviados só pelos lotes vencidos perdem apenas esses lotes; os demais saem inteiros.
-  const itens = log.itensLote?.length ? log.itensLote : [{ foodId: log.foodId }];
-  for (const { foodId: id, apenasVencidos } of itens) {
-    const alimento = foods.value.find((f) => f.id === id);
-    if (!alimento || String(alimento.lojaId) !== String(loggedInStoreId.value)) continue;
-    if (apenasVencidos) await baixarVencidosDoItem(id);
-    else await removeFoodItem(id);
-  }
+  await baixarEstoqueDoDestino(itensDoRegistro(log));
+};
+// "Entregue" na aba Doações: baixa o lote do estoque e registra a doação (relatórios e certificado).
+// Se o termo já tinha gerado o registro (fluxo do assistente), não faz nada em dobro.
+const handleEntregaConfirmada = async (oferta) => {
+  if (!oferta || disposalLogs.value.some((l) => l.ofertaId === oferta.id)) return;
+  const itens = oferta.itensLote?.length
+    ? oferta.itensLote
+    : [{ foodId: oferta.foodId, foodName: oferta.foodName, category: oferta.category, quantity: oferta.quantity, weightKg: oferta.weightEstimatedKg }];
+  const log = {
+    id: "SV-" + Math.floor(1e5 + Math.random() * 9e5),
+    foodId: oferta.foodId || itens[0]?.foodId || "manual",
+    itensLote: oferta.itensLote?.length ? oferta.itensLote : undefined,
+    foodName: oferta.foodName,
+    category: oferta.category,
+    quantity: oferta.quantity,
+    dataValidade: oferta.dataValidade,
+    type: "donation",
+    ofertaId: oferta.id,
+    lojaId: oferta.lojaId,
+    nomeLoja: oferta.nomeLoja,
+    storeCnpj: oferta.storeCnpj,
+    recipientOrganization: oferta.recipientOrg,
+    recipientCnpj: oferta.recipientCnpj,
+    recipientRepresentativeName: oferta.signatureName || "",
+    recipientRepresentativeCpf: oferta.signatureCpf || "",
+    signatureName: oferta.donorSignedBy || oferta.nomeLoja,
+    signatureImage: oferta.donorSignatureImage || "",
+    signatureType: oferta.donorSignatureType || "",
+    weightEstimatedKg: Number(oferta.weightEstimatedKg) || 1,
+    date: oferta.entregueEm || new Date().toISOString(),
+    sha256: oferta.signatureHash || oferta.donorAuthCode || ""
+  };
+  disposalLogs.value.unshift(log);
+  await baixarEstoqueDoDestino(itens.map((i) => ({ foodId: i.foodId, quantity: i.quantity })));
 };
 // Vários itens vencidos selecionados: abre o assistente com todos eles
 const handleDestinarVarios = (itens) => {
   if (!itens?.length) return;
-  const preparados = itens.map(prepararParaDestinar);
-  selectedFoodToDispose.value = preparados.length === 1 ? preparados[0] : preparados;
+  selectedFoodToDispose.value = itens.length === 1 ? itens[0] : itens;
   initialDisposalType.value = "donation";
   initialDisposalStep.value = 1;
   showDisposalWizard.value = true;
@@ -560,6 +615,7 @@ const totalAvaliacoes = computed(
           :modoEscuro="modoEscuro"
           @proceed-donation="handleProceedDonationFromInquiry"
           @doar-outra-entidade="handleDoarParaOutraEntidade"
+          @entrega-confirmada="handleEntregaConfirmada"
         />
 
         <!-- View 2: Orders Processors (Pipeline) -->
