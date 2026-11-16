@@ -732,7 +732,7 @@ const onDirectoryClose = () => {
                 <span class="text-caption text-weight-bold text-uppercase text-grey-6 label-wide">Peso Estimado do Lote (KG)</span>
                 <span class="text-secondary text-weight-bold mono">{{ weightEstimated }} Kg</span>
               </div>
-              <div class="row items-center q-gutter-x-md">
+              <div class="row items-center no-wrap weight-row">
                 <q-slider
                   v-model="weightEstimated"
                   :min="0.5"
@@ -766,6 +766,8 @@ const onDirectoryClose = () => {
 
                 <q-select
                   v-model="recipientOrg"
+                  class="partner-select"
+                  popup-content-class="partner-select-menu"
                   :options="socialPartnerOptions"
                   emit-value
                   map-options
@@ -890,6 +892,8 @@ const onDirectoryClose = () => {
 
                 <q-select
                   v-model="discardDestination"
+                  class="partner-select"
+                  popup-content-class="partner-select-menu"
                   :options="disposalPartnerOptions"
                   emit-value
                   map-options
@@ -1342,21 +1346,110 @@ const onDirectoryClose = () => {
 <style scoped lang="scss">
 .wizard-card {
   width: 100%;
-  max-width: 400px;
+  max-width: min(520px, 100%);
   max-height: 92vh;
+  max-height: 92dvh;
+  min-width: 0;
   border-radius: 24px;
   overflow: hidden;
 }
 .wizard-stepper {
   background: transparent;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
   :deep(.q-stepper__header) {
     min-height: 0;
   }
   :deep(.q-stepper__tab) {
     padding: 12px 8px;
   }
+  :deep(.q-stepper__content),
+  :deep(.q-panel),
+  :deep(.q-stepper__step-content) {
+    min-width: 0;
+    max-width: 100%;
+  }
   :deep(.q-stepper__step-inner) {
     padding: 16px 20px 20px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  // Todo texto longo (endereço, licença, nomes) quebra linha em vez de vazar
+  :deep(.column),
+  :deep(.row),
+  :deep(.col),
+  :deep(.q-card),
+  :deep(.q-card__section),
+  :deep(.q-banner__content) {
+    min-width: 0;
+    max-width: 100%;
+  }
+  :deep(.text-caption),
+  :deep(strong),
+  :deep(.q-banner__content),
+  :deep(.q-chip__content),
+  :deep(.q-badge) {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  :deep(.q-badge) {
+    height: auto;
+    max-width: 100%;
+    white-space: normal;
+    text-align: left;
+    padding: 3px 6px;
+  }
+  :deep(.q-chip) {
+    height: auto;
+    min-height: 24px;
+    max-width: 100%;
+    white-space: normal;
+  }
+  :deep(.q-banner) {
+    min-height: 0;
+  }
+  :deep(.q-banner__avatar) {
+    align-self: flex-start;
+  }
+  :deep(.q-btn) {
+    max-width: 100%;
+  }
+  :deep(.q-btn__content) {
+    flex-wrap: nowrap;
+    text-align: center;
+  }
+}
+.partner-select {
+  max-width: 100%;
+  :deep(.q-field__control) {
+    height: auto;
+    min-height: 40px;
+  }
+  :deep(.q-field__native) {
+    min-width: 0;
+    white-space: normal;
+    line-height: 1.3;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  :deep(.q-field__native > span) {
+    overflow-wrap: anywhere;
+  }
+}
+.weight-row {
+  gap: 16px;
+  :deep(.q-slider) {
+    min-width: 0;
+  }
+}
+@media (max-width: 599px) {
+  .wizard-card {
+    border-radius: 20px;
+  }
+  .wizard-stepper :deep(.q-stepper__step-inner) {
+    padding: 14px 14px 18px;
   }
 }
 .label-wide {
@@ -1424,6 +1517,16 @@ const onDirectoryClose = () => {
 .body--dark & {
   .signature-preview {
     border-color: rgba(255, 255, 255, 0.2);
+  }
+}
+</style>
+
+<style lang="scss">
+.partner-select-menu {
+  max-width: calc(100vw - 32px) !important;
+  .q-item__label {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 </style>
