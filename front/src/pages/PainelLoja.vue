@@ -20,6 +20,7 @@ import RelatorioMensalView from "../components/RelatorioMensalView.vue";
 import ResumoInicioLoja from "../components/store/ResumoInicioLoja.vue";
 import MenuLoja from "../components/store/MenuLoja.vue";
 import ContadoresLoja from "../components/store/ContadoresLoja.vue";
+import { prepararParaDestinar } from "../utils/lotesVencidos";
 import AvaliacoesRecebidas from "../components/store/AvaliacoesRecebidas.vue";
 import AlertasVencimentoLoja from "../components/store/AlertasVencimentoLoja.vue";
 import { servicoDoacoes } from "../services/servicoDoacoes";
@@ -35,6 +36,7 @@ const { usuarioAtual, foods, orders, modoEscuro, stores } = storeToRefs(appStore
 const {
   updateFoodItem,
   removeFoodItem,
+  baixarVencidosDoItem,
   setEditingFood,
   updateOrderStatus,
   updateProfile,
@@ -65,7 +67,8 @@ const handleSavePricingConfig = (config) => {
   }
 };
 const handleTriggerDisposalFromPricing = (food) => {
-  selectedFoodToDispose.value = food;
+  // Item com lote vencido: a doação leva só as sacolas vencidas
+  selectedFoodToDispose.value = prepararParaDestinar(food);
   initialDisposalType.value = "donation";
   initialDisposalStep.value = 1;
   showDisposalWizard.value = true;
@@ -309,16 +312,20 @@ const handleCompletedDisposal = async (log) => {
   disposalLogs.value.unshift(log);
   // Só tira do catálogo alimentos desta loja (o servidor recusa apagar os de outro estabelecimento).
   // Em lote (vários itens selecionados), todos os itens do lote saem do catálogo.
-  const ids = log.itensLote?.length ? log.itensLote.map((i) => i.foodId) : [log.foodId];
-  for (const id of ids) {
+  // Itens enviados só pelos lotes vencidos perdem apenas esses lotes; os demais saem inteiros.
+  const itens = log.itensLote?.length ? log.itensLote : [{ foodId: log.foodId }];
+  for (const { foodId: id, apenasVencidos } of itens) {
     const alimento = foods.value.find((f) => f.id === id);
-    if (alimento && String(alimento.lojaId) === String(loggedInStoreId.value)) await removeFoodItem(id);
+    if (!alimento || String(alimento.lojaId) !== String(loggedInStoreId.value)) continue;
+    if (apenasVencidos) await baixarVencidosDoItem(id);
+    else await removeFoodItem(id);
   }
 };
 // Vários itens vencidos selecionados: abre o assistente com todos eles
 const handleDestinarVarios = (itens) => {
   if (!itens?.length) return;
-  selectedFoodToDispose.value = itens.length === 1 ? itens[0] : itens;
+  const preparados = itens.map(prepararParaDestinar);
+  selectedFoodToDispose.value = preparados.length === 1 ? preparados[0] : preparados;
   initialDisposalType.value = "donation";
   initialDisposalStep.value = 1;
   showDisposalWizard.value = true;

@@ -33,14 +33,17 @@ export const loteParaFront = (l) => ({
   id: l.id,
   quantity: l.quantidade,
   dataFabricacao: l.data_fabricacao,
-  dataValidade: l.data_validade
+  dataValidade: l.data_validade,
+  // Lote com a validade já passada: continua no estoque até a loja doar ou descartar
+  vencido: !!l.vencido
 })
 
 // Anexa "lotes" (ordem de saída) a cada linha de alimento.
 export async function anexarLotes(rows, db) {
   if (!rows.length) return rows
   const { rows: lotes } = await consultar(
-    `SELECT * FROM alimento_lotes WHERE alimento_id = ANY($1) AND quantidade > 0 ${ORDEM_SAIDA}`,
+    `SELECT *, (data_validade < CURRENT_DATE) AS vencido
+       FROM alimento_lotes WHERE alimento_id = ANY($1) AND quantidade > 0 ${ORDEM_SAIDA}`,
     [rows.map((r) => r.id)],
     db
   )
@@ -49,7 +52,31 @@ export async function anexarLotes(rows, db) {
     if (!porItem.has(l.alimento_id)) porItem.set(l.alimento_id, [])
     porItem.get(l.alimento_id).push(loteParaFront(l))
   }
-  return rows.map((r) => ({ ...r, lotes: porItem.get(r.id) || [] }))
+  return rows.map((r) => {
+    const lotesDoItem = porItem.get(r.id) || []
+    const quantidadeVencida = lotesDoItem.filter((l) => l.vencido).reduce((s, l) => s + l.quantity, 0)
+    const quantidadeTotal = lotesDoItem.reduce((s, l) => s + l.quantity, 0)
+    return {
+      ...r,
+      lotes: lotesDoItem,
+      // Sacolas que ainda podem ser vendidas x sacolas vencidas (separadas para doação/descarte)
+      quantidadeVencida,
+      quantidadeVendavel: Math.max(0, quantidadeTotal - quantidadeVencida)
+    }
+  })
+}
+
+// Doação/descarte de vencidos: tira SÓ os lotes com validade passada. Os lotes bons continuam
+// no estoque. Devolve quantas sacolas saíram e quantas sobraram (0 = o item ficou sem estoque).
+export async function removerLotesVencidos(db, alimentoId) {
+  const { rows } = await consultar(
+    'DELETE FROM alimento_lotes WHERE alimento_id = $1 AND data_validade < CURRENT_DATE RETURNING quantidade',
+    [alimentoId],
+    db
+  )
+  const removidas = rows.reduce((s, l) => s + l.quantidade, 0)
+  const restante = await sincronizarAlimento(db, alimentoId)
+  return { removidas, restante }
 }
 
 // Recalcula o item a partir dos lotes: remove lotes zerados, soma o estoque e

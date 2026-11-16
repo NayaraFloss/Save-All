@@ -9,6 +9,7 @@ import {
   entrarLote,
   substituirLotes,
   sincronizarAlimento,
+  removerLotesVencidos,
   normalizarNome,
 } from "../utils/estoque.js";
 
@@ -361,6 +362,22 @@ export async function atualizar(req, res) {
     req.params.id,
   ]);
   res.json(alimentoParaFront((await anexarLotes(rows))[0]));
+}
+
+// Doação/descarte de itens vencidos: remove só os lotes vencidos e preserva o estoque bom.
+// Se não sobrar nenhum lote, o item sai do catálogo (como antes).
+export async function baixarVencidos(req, res) {
+  await carregarComPermissao(req, req.params.id);
+  const resultado = await transacao(async (db) => {
+    await consultar("SELECT id FROM alimentos WHERE id = $1 FOR UPDATE", [req.params.id], db);
+    const baixa = await removerLotesVencidos(db, req.params.id);
+    if (baixa.restante <= 0) {
+      await consultar("DELETE FROM alimentos WHERE id = $1", [req.params.id], db);
+      return { ...baixa, itemRemovido: true };
+    }
+    return { ...baixa, itemRemovido: false };
+  });
+  res.json({ success: true, ...resultado });
 }
 
 export async function remover(req, res) {

@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from "vue";
+import { loteVencido, resumoEstoque } from "../../utils/lotesVencidos";
 const props = defineProps({ darkMode: Boolean, foods: { type: Array, default: () => [] }, lojaId: String });
 const emit = defineEmits(["edit-item", "add-item-click", "remove-item"]);
 const myFoods = computed(() => {
@@ -78,14 +79,25 @@ const myFoods = computed(() => {
             <q-badge v-if="food.quantity !== undefined" outline color="grey-7" class="text-weight-bold">
               Estoque total: {{ food.quantity }}
             </q-badge>
+            <q-badge v-if="resumoEstoque(food).vencidas > 0" color="negative" class="text-weight-bold">
+              Vencidas: {{ resumoEstoque(food).vencidas }}
+            </q-badge>
           </div>
 
           <!-- Lotes por validade: o primeiro é o que sai primeiro -->
           <div v-if="food.lotes && food.lotes.length" class="q-mt-xs">
             <div v-for="(lote, i) in food.lotes" :key="lote.id" class="text-caption text-grey-7">
-              <q-icon :name="i === 0 ? 'bolt' : 'schedule'" :color="i === 0 ? 'orange' : 'grey-6'" size="14px" />
-              {{ lote.quantity }} un. · vence {{ String(lote.dataValidade).slice(0, 10).split('-').reverse().join('/') }}
-              <span v-if="i === 0 && food.lotes.length > 1" class="text-orange text-weight-bold">(sai primeiro)</span>
+              <template v-if="loteVencido(lote)">
+                <q-icon name="warning" color="negative" size="14px" />
+                <span class="text-negative text-weight-bold">
+                  {{ lote.quantity }} un. · venceu em {{ String(lote.dataValidade).slice(0, 10).split('-').reverse().join('/') }} (vencido)
+                </span>
+              </template>
+              <template v-else>
+                <q-icon :name="i === 0 ? 'bolt' : 'schedule'" :color="i === 0 ? 'orange' : 'grey-6'" size="14px" />
+                {{ lote.quantity }} un. · vence {{ String(lote.dataValidade).slice(0, 10).split('-').reverse().join('/') }}
+                <span v-if="i === 0 && food.lotes.filter((l) => !loteVencido(l)).length > 1" class="text-orange text-weight-bold">(sai primeiro)</span>
+              </template>
             </div>
           </div>
 

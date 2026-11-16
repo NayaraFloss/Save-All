@@ -34,6 +34,16 @@ const foodService = {
       throw new Error(msg);
     }
   },
+  // Doação/descarte de vencidos: só os lotes vencidos saem; os lotes bons ficam no estoque.
+  async baixarVencidos(id) {
+    try {
+      const response = await api.post(`/foods/${id}/baixar-vencidos`);
+      return response.data;
+    } catch (error) {
+      const msg = error.response?.data?.message || "Erro ao dar baixa nos lotes vencidos.";
+      throw new Error(msg);
+    }
+  },
   async removeFood(id) {
     try {
       const response = await api.delete(`/foods/${id}`);

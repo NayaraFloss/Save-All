@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch } from "vue";
+import { resumoEstoque } from "../../utils/lotesVencidos";
 import { ordenarPorUrgenciaDeVencimento, calcularPrecificacaoDinamica } from "../../utils/precificacaoDinamica";
 
 const props = defineProps({
@@ -21,9 +22,11 @@ const vencidos = computed(() =>
     .filter((f) => f.lojaId === props.lojaId && f.status !== "sold_out" && !(Number(f.quantity) <= 0))
     .map((f) => ({
       ...f,
-      calc: calcularPrecificacaoDinamica(f.dataFabricacao, f.dataValidade, Number(f.precoOriginal) || 0, {})
+      calc: calcularPrecificacaoDinamica(f.dataFabricacao, f.dataValidade, Number(f.precoOriginal) || 0, {}),
+      vencidasQtd: resumoEstoque(f).vencidas,
     }))
-    .filter((f) => f.calc.vencido)
+    // Entra na lista quem tem sacolas vencidas, mesmo que outros lotes do item ainda estejam bons
+    .filter((f) => f.vencidasQtd > 0 || f.calc.vencido)
 );
 // Seleção de vários vencidos para doar ou descartar juntos
 const selecionados = ref([]);
@@ -98,7 +101,14 @@ const prazo = (calc) => {
         </q-item-section>
         <q-item-section>
           <q-item-label class="text-weight-bold">{{ item.name }}</q-item-label>
-          <q-item-label caption>Venceu em {{ new Date(item.dataValidade + 'T12:00:00').toLocaleDateString('pt-BR') }} · {{ item.quantity ?? 1 }} un</q-item-label>
+          <q-item-label caption>
+            <template v-if="item.vencidasQtd > 0 && item.vencidasQtd < (Number(item.quantity) || 0)">
+              {{ item.vencidasQtd }} un. vencida(s) · {{ (Number(item.quantity) || 0) - item.vencidasQtd }} un. ainda boas (ficam no estoque)
+            </template>
+            <template v-else>
+              Venceu em {{ new Date(item.dataValidade + 'T12:00:00').toLocaleDateString('pt-BR') }} · {{ item.vencidasQtd || item.quantity || 1 }} un
+            </template>
+          </q-item-label>
         </q-item-section>
         <q-item-section side>
           <q-btn

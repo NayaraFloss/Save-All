@@ -415,6 +415,19 @@ export const useAppStore = defineStore('app', () => {
       loading.value = false
     }
   }
+  // Doação/descarte de vencidos: tira só os lotes vencidos e mantém o estoque bom.
+  const baixarVencidosDoItem = async (id) => {
+    loading.value = true
+    try {
+      await foodService.baixarVencidos(id)
+      foods.value = await foodService.getAllFoods()
+      triggerNotification('Lotes vencidos retirados do estoque.', 'success')
+    } catch (err) {
+      triggerNotification(err.message, 'error')
+    } finally {
+      loading.value = false
+    }
+  }
   // Devolve true só se a alteração foi realmente salva no servidor.
   const updateFoodItem = async (id, data) => {
     loading.value = true
@@ -616,6 +629,7 @@ export const useAppStore = defineStore('app', () => {
     loadFoods,
     addNewFoodItem,
     removeFoodItem,
+    baixarVencidosDoItem,
     updateFoodItem,
     editingFood,
     setEditingFood,

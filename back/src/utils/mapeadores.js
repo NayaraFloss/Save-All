@@ -80,6 +80,8 @@ export const alimentoParaFront = (a) =>
     // Peso de cada unidade (kg): usado no cálculo do peso da doação/descarte e do CO₂
     weightKg: a.peso_unitario_kg != null ? Number(a.peso_unitario_kg) : a.peso_kg != null ? Number(a.peso_kg) : null,
     lotes: a.lotes,
+    quantidadeVencida: a.quantidadeVencida,
+    quantidadeVendavel: a.quantidadeVendavel,
     criadoEm: a.criado_em
   })
 

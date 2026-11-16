@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from "vue";
+import { resumoEstoque } from "../../utils/lotesVencidos";
 const props = defineProps({ modoEscuro: Boolean, foods: { type: Array, default: () => [] }, lojaId: String });
 const emit = defineEmits(["edit-item", "add-item-click", "inactivate-item", "publish-item", "destinar-item"]);
 // Item inativo continua cadastrado, mas não aparece para os clientes.
@@ -185,7 +186,10 @@ const limparFiltros = () => {
             </q-badge>
 
             <q-badge v-if="food.quantity !== undefined" outline color="grey-7" class="text-weight-bold">
-              Sacolas: {{ food.quantity }}
+              Sacolas: {{ resumoEstoque(food).vendaveis }}
+            </q-badge>
+            <q-badge v-if="resumoEstoque(food).vencidas > 0" color="negative" class="text-weight-bold">
+              <q-icon name="warning" size="12px" class="q-mr-xs" />Vencidas: {{ resumoEstoque(food).vencidas }}
             </q-badge>
             <q-badge v-if="estaInativo(food)" color="grey-8" class="text-weight-bold text-uppercase">
               <q-icon name="visibility_off" size="12px" class="q-mr-xs" />Inativo
@@ -242,13 +246,13 @@ const limparFiltros = () => {
         <q-btn
           :id="`btn-catalogo-destinar-${food.id}`"
           class="col"
-          :outline="!situacaoValidade(food.dataValidade).vencido"
-          :unelevated="situacaoValidade(food.dataValidade).vencido"
+          :outline="!(situacaoValidade(food.dataValidade).vencido || resumoEstoque(food).vencidas > 0)"
+          :unelevated="situacaoValidade(food.dataValidade).vencido || resumoEstoque(food).vencidas > 0"
           dense
           no-caps
           color="negative"
           icon="volunteer_activism"
-          label="Doar / Descartar"
+          :label="resumoEstoque(food).vencidas > 0 ? `Doar / Descartar vencidas (${resumoEstoque(food).vencidas})` : 'Doar / Descartar'"
           @click="emit('destinar-item', food)"
         />
         <q-btn

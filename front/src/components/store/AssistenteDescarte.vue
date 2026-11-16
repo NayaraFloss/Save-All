@@ -337,7 +337,7 @@ const handleSendInquiryViaAppAndWhatsapp = () => {
     quantity: productQty.value || 1,
     weightEstimatedKg: weightEstimated.value || 5,
     // Itens do lote, para retirar todos do catálogo quando a doação for concluída
-    itensLote: itensLote.value.map((i) => ({ foodId: i.id, foodName: i.name, category: i.category, quantity: Number(i.quantity) || 1, weightKg: pesoDoItem(i) })),
+    itensLote: itensLote.value.map((i) => ({ foodId: i.id, foodName: i.name, category: i.category, quantity: Number(i.quantity) || 1, weightKg: pesoDoItem(i), apenasVencidos: !!i.apenasVencidos })),
     lojaId: "",
     nomeLoja: storeNameField.value || "Mercado Central",
     storeAddress: "Av. Brasil, 1200 - Centro",
@@ -689,7 +689,7 @@ const handleCompleteWizard = () => {
     id: saveAllCode,
     foodId: itensLote.value[0]?.id || "manual",
     // Itens do lote (seleção de vários vencidos): todos saem do catálogo
-    itensLote: itensLote.value.map((i) => ({ foodId: i.id, foodName: i.name, category: i.category, quantity: Number(i.quantity) || 1, weightKg: pesoDoItem(i) })),
+    itensLote: itensLote.value.map((i) => ({ foodId: i.id, foodName: i.name, category: i.category, quantity: Number(i.quantity) || 1, weightKg: pesoDoItem(i), apenasVencidos: !!i.apenasVencidos })),
     foodName: productName.value,
     category: productCategory.value,
     quantity: productQty.value,

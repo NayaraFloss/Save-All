@@ -77,6 +77,13 @@ rotas.put(
   exigirPerfil("loja", "master"),
   assincrono(alimentos.atualizar),
 );
+// Doar/descartar vencidos: remove só os lotes vencidos e mantém os lotes bons no estoque
+rotas.post(
+  "/foods/:id/baixar-vencidos",
+  exigirLogin,
+  exigirPerfil("loja", "master"),
+  assincrono(alimentos.baixarVencidos),
+);
 rotas.delete(
   "/foods/:id",
   exigirLogin,
