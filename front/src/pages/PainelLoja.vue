@@ -1,7 +1,7 @@
 <script setup>
 import { useRouter, useRoute } from "vue-router";
 import { IMAGES } from 'src/assets/images'
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useAppStore } from "../stores/estadoApp";
 import { armazem } from "../services/armazemServidor";
@@ -338,6 +338,37 @@ const atualizarConsultasPendentes = () => {
 };
 onMounted(atualizarConsultasPendentes);
 watch(currentStoreView, atualizarConsultasPendentes);
+
+// Avaliações dadas pelas entidades (link público, em outro aparelho): vêm do servidor, então a aba
+// Qualidade busca as ofertas ao abrir e confere de novo a cada 15 s enquanto está aberta.
+const ofertasAvaliadas = ref([]);
+const lerOfertasAvaliadas = () => {
+  ofertasAvaliadas.value = servicoDoacoes.getDonationOffers().filter((o) => o?.avaliacaoEntidade?.notaComida);
+};
+const sincronizarAvaliacoesEntidades = async () => {
+  await servicoDoacoes.atualizarDoServidor();
+  lerOfertasAvaliadas();
+};
+let temporizadorAvaliacoes = null;
+const pararSincronizacaoAvaliacoes = () => {
+  clearInterval(temporizadorAvaliacoes);
+  temporizadorAvaliacoes = null;
+};
+watch(
+  currentStoreView,
+  (aba) => {
+    pararSincronizacaoAvaliacoes();
+    if (aba !== "quality") return;
+    lerOfertasAvaliadas();
+    sincronizarAvaliacoesEntidades();
+    temporizadorAvaliacoes = setInterval(sincronizarAvaliacoesEntidades, 15000);
+  },
+  { immediate: true },
+);
+onUnmounted(pararSincronizacaoAvaliacoes);
+const totalAvaliacoes = computed(
+  () => storeOrders.value.filter((o) => o.notaComida).length + ofertasAvaliadas.value.length,
+);
 </script>
 
 <template>
@@ -417,7 +448,7 @@ watch(currentStoreView, atualizarConsultasPendentes);
                         {{ usuarioAtual?.rating?.toFixed(1) || '4.9' }} ★
                       </span>
                       <span class="text-caption text-grey-6">
-                        ({{ storeOrders.filter((o) => o.notaComida).length }} avaliações)
+                        ({{ totalAvaliacoes }} avaliações)
                       </span>
                     </div>
                   </q-card-section>
@@ -460,7 +491,7 @@ watch(currentStoreView, atualizarConsultasPendentes);
         </q-card>
 
         <!-- Avaliações dos clientes: quem avaliou, nota e comentário -->
-        <AvaliacoesRecebidas v-if="currentStoreView === 'quality'" :orders="storeOrders" :modoEscuro="modoEscuro" />
+        <AvaliacoesRecebidas v-if="currentStoreView === 'quality'" :orders="storeOrders" :donations="ofertasAvaliadas" :modoEscuro="modoEscuro" />
 
         <!-- Início: resumo com mini gráficos -->
         <div v-if="currentStoreView === 'dashboard'" class="column q-gutter-y-md">

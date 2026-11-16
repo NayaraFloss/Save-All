@@ -3,25 +3,48 @@ import { computed, ref } from "vue";
 
 const props = defineProps({
   orders: { type: Array, default: () => [] },
+  // Doações entregues já avaliadas pela entidade (campo avaliacaoEntidade)
+  donations: { type: Array, default: () => [] },
   modoEscuro: Boolean
 });
 
 const somenteReclamacoes = ref(false);
 
-// Pedidos já avaliados pelo cliente, do mais recente para o mais antigo.
-const avaliacoes = computed(() =>
+// Avaliações dos clientes (pedidos) e das entidades (doações), da mais recente para a mais antiga.
+const dePedidos = computed(() =>
   props.orders
     .filter((o) => o.notaComida)
-    .sort((a, b) => new Date(b.avaliadoEm || b.date || 0) - new Date(a.avaliadoEm || a.date || 0))
+    .map((o) => ({
+      id: `pedido-${o.id}`,
+      origem: "cliente",
+      notaComida: Number(o.notaComida),
+      comentarioComida: o.comentarioComida,
+      reclamacaoComida: !!o.reclamacaoComida,
+      data: o.avaliadoEm || o.date,
+    })),
 );
-const lista = computed(() =>
-  somenteReclamacoes.value ? avaliacoes.value.filter((o) => o.reclamacaoComida || o.notaComida === 1) : avaliacoes.value
+const deDoacoes = computed(() =>
+  props.donations
+    .filter((d) => d?.avaliacaoEntidade?.notaComida)
+    .map((d) => ({
+      id: `doacao-${d.id || d.token}`,
+      origem: "entidade",
+      notaComida: Number(d.avaliacaoEntidade.notaComida),
+      comentarioComida: d.avaliacaoEntidade.comentarioComida,
+      reclamacaoComida: !!d.avaliacaoEntidade.reclamacaoComida,
+      data: d.avaliacaoEntidade.avaliadoEm || d.completedAt || d.createdAt,
+    })),
 );
+const avaliacoes = computed(() =>
+  [...dePedidos.value, ...deDoacoes.value].sort((a, b) => new Date(b.data || 0) - new Date(a.data || 0)),
+);
+const ehReclamacao = (o) => o.reclamacaoComida || o.notaComida === 1;
+const lista = computed(() => (somenteReclamacoes.value ? avaliacoes.value.filter(ehReclamacao) : avaliacoes.value));
 const media = computed(() => {
   if (!avaliacoes.value.length) return 0;
-  return avaliacoes.value.reduce((s, o) => s + Number(o.notaComida || 0), 0) / avaliacoes.value.length;
+  return avaliacoes.value.reduce((s, o) => s + o.notaComida, 0) / avaliacoes.value.length;
 });
-const totalReclamacoes = computed(() => avaliacoes.value.filter((o) => o.reclamacaoComida || o.notaComida === 1).length);
+const totalReclamacoes = computed(() => avaliacoes.value.filter(ehReclamacao).length);
 
 // Avaliações anônimas: só a data (sem hora), sem nome, sem número do pedido e sem itens comprados.
 const formatarData = (valor) => {
@@ -60,24 +83,26 @@ const corNota = (n) => (n >= 4 ? "positive" : n === 3 ? "warning" : "negative");
       <div v-if="!lista.length" class="column items-center text-center text-grey-6 q-py-lg q-gutter-y-xs">
         <q-icon name="star_outline" size="32px" class="opacity-40" />
         <div class="text-caption">
-          {{ somenteReclamacoes ? "Nenhuma reclamação registrada." : "Nenhum cliente avaliou seus pedidos ainda." }}
+          {{ somenteReclamacoes ? "Nenhuma reclamação registrada." : "Nenhum cliente ou entidade avaliou ainda." }}
         </div>
       </div>
 
       <q-list v-else separator>
         <q-item v-for="o in lista" :key="o.id" class="q-px-none items-start">
           <q-item-section avatar top>
-            <q-avatar color="grey-5" text-color="white" size="40px" icon="person" />
+            <q-avatar :color="o.origem === 'entidade' ? 'teal-5' : 'grey-5'" text-color="white" size="40px" :icon="o.origem === 'entidade' ? 'volunteer_activism' : 'person'" />
           </q-item-section>
           <q-item-section>
             <div class="row items-center justify-between no-wrap">
-              <div class="text-subtitle2 text-weight-bold ellipsis">Cliente anônimo</div>
-              <q-rating :model-value="Number(o.notaComida)" readonly size="16px" color="amber-8" icon="star" />
+              <div class="text-subtitle2 text-weight-bold ellipsis">
+                {{ o.origem === "entidade" ? "Entidade parceira" : "Cliente anônimo" }}
+              </div>
+              <q-rating :model-value="o.notaComida" readonly size="16px" color="amber-8" icon="star" />
             </div>
-            <div class="text-caption text-grey-6">Avaliado em {{ formatarData(o.avaliadoEm || o.date) }}</div>
+            <div class="text-caption text-grey-6">Avaliado em {{ formatarData(o.data) }}</div>
             <div v-if="o.comentarioComida" class="text-body2 q-mt-xs comentario">"{{ o.comentarioComida }}"</div>
             <div v-else class="text-caption text-grey-6 q-mt-xs">Sem comentário.</div>
-            <div v-if="o.reclamacaoComida || o.notaComida === 1" class="q-mt-xs">
+            <div v-if="ehReclamacao(o)" class="q-mt-xs">
               <q-badge color="negative" class="text-weight-bold">
                 <q-icon name="report" size="12px" class="q-mr-xs" />Reclamação formal
               </q-badge>
