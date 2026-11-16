@@ -3,7 +3,8 @@ import { ref, computed } from "vue";
 import {
   DEFAULT_DYNAMIC_PRICING_CONFIG,
   DYNAMIC_PRICING_LIMITS,
-  calculateDynamicPricing
+  calculateDynamicPricing,
+  formatarDataBR,
 } from "../../utils/precificacaoDinamica";
 const props = defineProps({
   lojaId: String,
@@ -387,7 +388,7 @@ const calculatedInventory = computed(() => {
               </q-badge>
             </div>
             <div class="text-caption text-grey-7 mono">
-              Fab: {{ new Date(item.fabDate).toLocaleDateString('pt-BR') }} · Val: {{ new Date(item.food.dataValidade).toLocaleDateString('pt-BR') }}
+              Fab: {{ formatarDataBR(item.fabDate) }} · Val: {{ formatarDataBR(item.food.dataValidade) }}
             </div>
           </q-item-section>
 

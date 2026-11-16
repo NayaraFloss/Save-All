@@ -21,7 +21,7 @@ export const resumoEstoque = (food) => {
     const vencidas = lotesVencidosDoItem(food).reduce((s, l) => s + (Number(l.quantity) || 0), 0);
     return { total, vencidas, vendaveis: Math.max(0, total - vencidas) };
   }
-  if (food?.quantidadeVencida !== undefined) {
+  if (Number(food?.quantidadeVencida) > 0) {
     const vencidas = Number(food.quantidadeVencida) || 0;
     return { total, vencidas, vendaveis: Math.max(0, total - vencidas) };
   }

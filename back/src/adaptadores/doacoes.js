@@ -75,6 +75,7 @@ export const SELECT_DOACAO = `
   SELECT d.*, l.nome AS l_nome, l.cnpj AS l_cnpj, l.endereco AS l_endereco, l.telefone AS l_telefone,
          e.nome AS e_nome, e.email AS e_email, e.whatsapp AS e_whatsapp, e.cnpj AS e_cnpj,
          e.endereco AS e_endereco, e.bairro AS e_bairro, e.cidade AS e_cidade, e.uf AS e_uf,
+         e.responsavel_legal AS e_responsavel,
          t.id AS termo_id, t.status AS termo_status,
          (SELECT row_to_json(i) FROM transacao_itens i WHERE i.transacao_id = d.transacao_id ORDER BY i.id LIMIT 1) AS item
     FROM doacoes d
@@ -103,6 +104,7 @@ export function doacaoParaFront(r) {
     recipientEmail: r.e_email,
     recipientWhatsapp: r.e_whatsapp,
     recipientCnpj: r.e_cnpj,
+    recipientContact: r.e_responsavel,
     recipientAddress: r.e_endereco
       ? `${r.e_endereco}${r.e_bairro ? ` - ${r.e_bairro}` : ""}, ${r.e_cidade}/${String(r.e_uf || "").trim()}`
       : null,
@@ -305,7 +307,12 @@ export const adaptadorDoacoes = {
           );
         // Nova consulta (ou troca de entidade): só entidades da mesma cidade da loja
         if (entidade && (!atual || entidade.id !== atual.entidade_id)) {
-          await garantirMesmaCidade(consultar, lojaId || atual?.loja_id, entidade, db);
+          await garantirMesmaCidade(
+            consultar,
+            lojaId || atual?.loja_id,
+            entidade,
+            db,
+          );
         }
 
         const extras = {

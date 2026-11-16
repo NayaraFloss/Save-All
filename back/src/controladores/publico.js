@@ -3,18 +3,6 @@ import { consultar, transacao } from "../config/db.js";
 import { ErroHttp } from "../utils/erros.js";
 import { texto } from "../utils/validacao.js";
 
-// CPF válido: 11 dígitos, não todos iguais e dígitos verificadores corretos
-const cpfValido = (valor) => {
-  const d = String(valor || "").replace(/\D/g, "");
-  if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
-  const digito = (base) => {
-    let soma = 0;
-    for (let i = 0; i < base.length; i++) soma += Number(base[i]) * (base.length + 1 - i);
-    const resto = (soma * 10) % 11;
-    return resto === 10 ? 0 : resto;
-  };
-  return digito(d.slice(0, 9)) === Number(d[9]) && digito(d.slice(0, 10)) === Number(d[10]);
-};
 import {
   entidadeParaFront,
   colunasDeEntidade,
@@ -122,10 +110,15 @@ export async function responderOferta(req, res) {
       campo: "responsável",
       max: 160,
     });
-    const cpf = texto(r.signatureCpf, { campo: "CPF", max: 20 });
-    if (r.status === "accepted" && !cpfValido(cpf)) {
-      throw new ErroHttp(400, "Informe um CPF válido do responsável (11 números).");
-    }
+    // O documento (CNPJ ou CPF) é o do cadastro da entidade: não depende do que vier no pedido
+    const { rows: cadastro } = await consultar(
+      "SELECT cnpj FROM entidades_sociais WHERE id = $1",
+      [atual.entidade_id],
+      db,
+    );
+    const cpf =
+      texto(cadastro[0]?.cnpj, { campo: "documento", max: 20 }) ||
+      texto(r.signatureCpf, { campo: "documento", max: 20 });
     const extras = { ...(atual.extras || {}) };
     if (assinatura) {
       Object.assign(extras, {

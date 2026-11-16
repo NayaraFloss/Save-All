@@ -293,3 +293,16 @@ export function ordenarPorUrgenciaDeVencimento(itensDisponiveis, dataReferencia 
     )
     .map(({ item, calc }) => ({ ...item, calc }))
 }
+
+/**
+ * Formata uma data (AAAA-MM-DD ou ISO) em dd/mm/aaaa sem deslocar o dia por fuso horário.
+ * `new Date('2026-11-16')` é lido como UTC e, no Brasil (UTC-3), aparecia como 15/11.
+ */
+export function formatarDataBR(valor) {
+  if (!valor) return 'N/A'
+  const texto = String(valor)
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(texto)
+  if (m && texto.length <= 10) return `${m[3]}/${m[2]}/${m[1]}`
+  const d = new Date(valor)
+  return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString('pt-BR')
+}

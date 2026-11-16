@@ -52,6 +52,28 @@ export async function anexarLotes(rows, db) {
     if (!porItem.has(l.alimento_id)) porItem.set(l.alimento_id, [])
     porItem.get(l.alimento_id).push(loteParaFront(l))
   }
+  // Item antigo, sem nenhum lote gravado: trata o estoque dele como um lote único (pela validade do
+  // próprio item), para vencidos/vendáveis funcionarem em TODAS as lojas, mesmo sem migração.
+  const semLote = rows.filter((r) => !porItem.has(r.id) && Number(r.quantidade) > 0 && r.data_validade)
+  if (semLote.length) {
+    const { rows: venc } = await consultar(
+      'SELECT id, (data_validade < CURRENT_DATE) AS vencido FROM alimentos WHERE id = ANY($1)',
+      [semLote.map((r) => r.id)],
+      db
+    )
+    const vencidoPorId = new Map(venc.map((v) => [v.id, v.vencido]))
+    for (const r of semLote) {
+      porItem.set(r.id, [
+        loteParaFront({
+          id: `item-${r.id}`,
+          quantidade: Number(r.quantidade),
+          data_fabricacao: r.data_fabricacao,
+          data_validade: r.data_validade,
+          vencido: vencidoPorId.get(r.id)
+        })
+      ])
+    }
+  }
   return rows.map((r) => {
     const lotesDoItem = porItem.get(r.id) || []
     const quantidadeVencida = lotesDoItem.filter((l) => l.vencido).reduce((s, l) => s + l.quantity, 0)
@@ -66,9 +88,24 @@ export async function anexarLotes(rows, db) {
   })
 }
 
+// Item sem nenhum lote gravado (cadastrado antes do controle por lote): cria o lote único a partir
+// do estoque e da validade do próprio item. Rodar dentro de transação, com o item já travado.
+export async function garantirLote(db, alimentoId) {
+  await consultar(
+    `INSERT INTO alimento_lotes (alimento_id, quantidade, data_fabricacao, data_validade)
+     SELECT a.id, a.quantidade, a.data_fabricacao, a.data_validade
+       FROM alimentos a
+      WHERE a.id = $1 AND a.quantidade > 0 AND a.data_validade IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM alimento_lotes l WHERE l.alimento_id = a.id)`,
+    [alimentoId],
+    db
+  )
+}
+
 // Doação/descarte de vencidos: tira SÓ os lotes com validade passada. Os lotes bons continuam
 // no estoque. Devolve quantas sacolas saíram e quantas sobraram (0 = o item ficou sem estoque).
 export async function removerLotesVencidos(db, alimentoId) {
+  await garantirLote(db, alimentoId)
   const { rows } = await consultar(
     'DELETE FROM alimento_lotes WHERE alimento_id = $1 AND data_validade < CURRENT_DATE RETURNING quantidade',
     [alimentoId],
@@ -164,6 +201,7 @@ export async function substituirLotes(db, alimentoId, lotes) {
 // (o preço de cada lote é lido da própria view de precificação dinâmica).
 // Deve rodar dentro da transação do pedido, com a linha do item já travada (FOR UPDATE).
 export async function baixarEstoque(db, alimento, quantidade) {
+  await garantirLote(db, alimento.id)
   await sincronizarAlimento(db, alimento.id)
   const { rows: lotes } = await consultar(
     `SELECT * FROM alimento_lotes
