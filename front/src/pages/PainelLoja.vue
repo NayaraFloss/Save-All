@@ -19,6 +19,7 @@ import { prepararImagemQuadrada } from "src/utils/imagens";
 import RelatorioMensalView from "../components/RelatorioMensalView.vue";
 import ResumoInicioLoja from "../components/store/ResumoInicioLoja.vue";
 import TermosRelatorio from "../components/store/TermosRelatorio.vue";
+import { resumoEstoque, prepararParaDestinar } from "../utils/lotesVencidos";
 import MenuLoja from "../components/store/MenuLoja.vue";
 import ContadoresLoja from "../components/store/ContadoresLoja.vue";
 import AvaliacoesRecebidas from "../components/store/AvaliacoesRecebidas.vue";
@@ -36,6 +37,7 @@ const { usuarioAtual, foods, orders, modoEscuro, stores } = storeToRefs(appStore
 const {
   updateFoodItem,
   removeFoodItem,
+  baixarVencidosDoItem,
   setEditingFood,
   updateOrderStatus,
   updateProfile,
@@ -66,7 +68,8 @@ const handleSavePricingConfig = (config) => {
   }
 };
 const handleTriggerDisposalFromPricing = (food) => {
-  selectedFoodToDispose.value = food;
+  // Com sacolas vencidas, a doação/descarte leva só elas; os lotes bons ficam no estoque
+  selectedFoodToDispose.value = prepararParaDestinar(food);
   initialDisposalType.value = "donation";
   initialDisposalStep.value = 1;
   showDisposalWizard.value = true;
@@ -329,6 +332,11 @@ const baixarEstoqueDoDestino = async (itens) => {
     const alimento = foods.value.find((f) => f.id === item.foodId);
     // O servidor recusa mexer em alimentos de outro estabelecimento
     if (!alimento || String(alimento.lojaId) !== String(loggedInStoreId.value)) continue;
+    // Item com lote vencido: o servidor tira só os vencidos (e remove o item se nada sobrar)
+    if (resumoEstoque(alimento).vencidas > 0) {
+      await baixarVencidosDoItem(item.foodId);
+      continue;
+    }
     const lotes = (alimento.lotes?.length
       ? alimento.lotes
       : [{ quantity: alimento.quantity, dataFabricacao: alimento.dataFabricacao, dataValidade: alimento.dataValidade }]
@@ -353,8 +361,19 @@ const itensDoRegistro = (log) =>
   log.itensLote?.length
     ? log.itensLote.map((i) => ({ foodId: i.foodId, quantity: i.quantity }))
     : [{ foodId: log.foodId, quantity: log.quantity }];
+// Grava os registros (certificados) agora e avisa se o servidor recusar; sem isso o certificado
+// some da tela em silêncio quando o salvamento falha.
+const salvarRegistrosComAviso = async () => {
+  const resposta = await armazem.salvarColecao("esg_disposal_logs", disposalLogs.value);
+  if (resposta?.erro) {
+    triggerNotification(`O certificado não foi salvo: ${resposta.erro}`, "error");
+    return false;
+  }
+  return true;
+};
 const handleCompletedDisposal = async (log) => {
   disposalLogs.value.unshift(log);
+  await salvarRegistrosComAviso();
   await baixarEstoqueDoDestino(itensDoRegistro(log));
 };
 // "Entregue" na aba Doações: baixa o lote do estoque e registra a doação (relatórios e certificado).
@@ -392,12 +411,14 @@ const handleEntregaConfirmada = async (oferta) => {
     sha256: oferta.signatureHash || oferta.donorAuthCode || ""
   };
   disposalLogs.value.unshift(log);
+  await salvarRegistrosComAviso();
   await baixarEstoqueDoDestino(itens.map((i) => ({ foodId: i.foodId, quantity: i.quantity })));
 };
 // Vários itens vencidos selecionados: abre o assistente com todos eles
 const handleDestinarVarios = (itens) => {
   if (!itens?.length) return;
-  selectedFoodToDispose.value = itens.length === 1 ? itens[0] : itens;
+  const preparados = itens.map(prepararParaDestinar);
+  selectedFoodToDispose.value = preparados.length === 1 ? preparados[0] : preparados;
   initialDisposalType.value = "donation";
   initialDisposalStep.value = 1;
   showDisposalWizard.value = true;
