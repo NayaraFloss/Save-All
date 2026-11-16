@@ -419,6 +419,27 @@ export async function atualizar(req, res) {
       // Pedido cancelado: o que saiu do estoque volta para o(s) lote(s) de origem.
       if (novo === "cancelled") {
         await devolverEstoqueDoPedido(db, p.id);
+        // Pontos: devolve os usados no pedido e retira os que ele rendeu (mesma conta da criação).
+        await consultar(
+          `UPDATE usuarios
+              SET pontos = GREATEST(0, pontos + $1 - $2),
+                  valor_economizado = GREATEST(0, valor_economizado - $3)
+            WHERE id = $4`,
+          [
+            Number(p.pontos_usados) || 0,
+            Math.floor(Number(p.total) * 10),
+            Number(p.subtotal) || 0,
+            p.cliente_id,
+          ],
+          db,
+        );
+        // Loja: o valor do pedido deixa de contar no lucro acumulado.
+        await consultar(
+          `UPDATE usuarios SET lucro_acumulado = GREATEST(0, lucro_acumulado - $1)
+            WHERE id = (SELECT usuario_id FROM lojas WHERE id = $2)`,
+          [Number(p.total) || 0, p.loja_id],
+          db,
+        );
         // Registra quando e por quê (a loja vê o motivo no aviso de cancelamento).
         const motivo = texto(c.motivoCancelamento, {
           campo: "motivo do cancelamento",

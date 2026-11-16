@@ -2,6 +2,7 @@
 import FundoSustentavel from "components/FundoSustentavel.vue";
 import { IMAGES } from 'src/assets/images'
 import { ref, onMounted, watch, computed } from "vue";
+import { cidadesDasLojas } from "src/utils/cidades";
 import { useRouter, useRoute } from "vue-router";
 import { storeToRefs } from "pinia";
 import { useAppStore } from "../stores/estadoApp";
@@ -25,7 +26,6 @@ const {
   logout,
   loadOrders,
   setSelectedCity,
-  CITIES,
   storeBelongsToCity,
   alternarModoEscuro,
   toggleNotifications,
@@ -52,8 +52,9 @@ const citySearch = ref("");
 const normalizeText = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const filteredCities = computed(() => {
   const term = normalizeText(citySearch.value).trim();
-  if (!term) return CITIES;
-  return CITIES.filter((c) => normalizeText(c).includes(term));
+  const cidades = cidadesDasLojas(stores.value);
+  if (!term) return cidades;
+  return cidades.filter((c) => normalizeText(c).includes(term));
 });
 watch(showCityMenu, (open) => { if (!open) citySearch.value = ""; });
 const showMonthlyReportModal = ref(false);

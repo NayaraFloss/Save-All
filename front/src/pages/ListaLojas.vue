@@ -2,12 +2,14 @@
 import FundoSustentavel from "components/FundoSustentavel.vue";
 import { useRouter } from "vue-router";
 import { ref, computed } from "vue";
+import { cidadesDasLojas } from "src/utils/cidades";
 import { storeToRefs } from "pinia";
 import { useAppStore } from "stores/estadoApp";
 const router = useRouter();
 const appStore = useAppStore();
 const { stores, foods, selectedCity } = storeToRefs(appStore);
-const { setSelectedCity, CITIES, storeBelongsToCity } = appStore;
+const { setSelectedCity, storeBelongsToCity } = appStore;
+const cidadesAtendidas = computed(() => cidadesDasLojas(stores.value));
 const search = ref("");
 const storeTab = ref("hoje");
 const storesInCurrentCity = computed(() => {
@@ -73,7 +75,7 @@ const handleSelectStore = (lojaId) => {
             <q-select
               id="select-city-in-stores"
               :model-value="selectedCity"
-              :options="CITIES"
+              :options="cidadesAtendidas"
               dense
               outlined
               options-dense

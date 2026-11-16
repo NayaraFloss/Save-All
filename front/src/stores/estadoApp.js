@@ -6,7 +6,7 @@ import { foodService } from 'src/services/servicoAlimentos'
 import { orderService } from 'src/services/servicoPedidos'
 import { storeService } from 'src/services/servicoLojas'
 import { canEvaluateOrder } from 'src/utils/utilitariosAvaliacaoPedido'
-import { CITIES, storeBelongsToCity, cidadesComAlimentos } from 'src/utils/cidades'
+import { CITIES, storeBelongsToCity, cidadesComAlimentos, cidadesDasLojas } from 'src/utils/cidades'
 import { armazem } from 'src/services/armazemServidor'
 
 export const useAppStore = defineStore('app', () => {
@@ -536,6 +536,8 @@ export const useAppStore = defineStore('app', () => {
       if (freshUser) {
         usuarioAtual.value = freshUser
       }
+      // Avaliação enviada: fecha o pop-up global na hora (o pedido já tem nota e não é oferecido de novo)
+      if (pedidoParaAvaliar.value && String(pedidoParaAvaliar.value.id) === String(id)) fecharAvaliacao()
       triggerNotification(
         'Avalia\xE7\xE3o enviada com sucesso! Obrigado pelo feedback \u{1F331}',
         'success',
@@ -550,6 +552,8 @@ export const useAppStore = defineStore('app', () => {
   }
 
   // Só aparecem cidades com alimentos à venda (conforme o banco); se a cidade escolhida deixar de ter, troca para a primeira disponível
+  // Cidades atendidas = onde há loja cadastrada (cresce sozinha quando uma loja de cidade nova se cadastra)
+  const cidadesAtendidas = computed(() => cidadesDasLojas(stores.value))
   const cidadesDisponiveis = computed(() => cidadesComAlimentos(stores.value, foods.value))
   watch(cidadesDisponiveis, (lista) => {
     if (lista.length && !lista.includes(selectedCity.value)) setSelectedCity(lista[0])
@@ -581,6 +585,7 @@ export const useAppStore = defineStore('app', () => {
     selectedCity,
     setSelectedCity,
     CITIES,
+    cidadesAtendidas,
     cidadesDisponiveis,
     storeBelongsToCity,
     setScreen,

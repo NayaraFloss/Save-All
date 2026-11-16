@@ -15,7 +15,7 @@ import CaixaInfoMaster from "../components/master/CaixaInfoMaster.vue";
 import GestaoItensMaster from "../components/master/GestaoItensMaster.vue";
 import GestaoDestinosMaster from "../components/master/GestaoDestinosMaster.vue";
 import { roleColor } from "../components/master/utilitariosMaster";
-import { CITIES, storeBelongsToCity } from "src/utils/cidades";
+import { cidadesDasLojas, cidadeDaLoja as cidadeDaLojaUtil, storeBelongsToCity } from "src/utils/cidades";
 import { prepararImagemQuadrada } from "src/utils/imagens";
 const appStore = useAppStore();
 const { triggerNotification } = appStore;
@@ -258,13 +258,13 @@ const itensDisponiveisDaLoja = (lojaId) =>
   foods.value.filter((f) => f.lojaId === lojaId && f.status === "active" && (f.quantity === void 0 || f.quantity > 0)).length;
 // Ativa = tem pelo menos um item disponível agora. Inativa = sem item.
 const lojaTemItem = (lojaId) => itensDisponiveisDaLoja(lojaId) > 0;
-const cidadeDaLoja = (s) => CITIES.find((c) => storeBelongsToCity(s, c)) || s.city || "";
+const cidadeDaLoja = (s) => cidadeDaLojaUtil(s);
 const ehNotaBaixa = (s) => {
   const userStore = allUsers.value.find((u) => u.role === "store" && (u.id === `user-${s.id}` || u.id === s.id || u.name === s.name));
   return s.rating < 3.5 || !!(userStore?.qtdReclamacoes && userStore.qtdReclamacoes > 2);
 };
 const opcoesCidade = computed(() => {
-  const comLojas = CITIES.filter((c) => allStores.value.some((s) => storeBelongsToCity(s, c)));
+  const comLojas = cidadesDasLojas(allStores.value);
   return [
     { label: `Todas as cidades (${allStores.value.length})`, value: null },
     ...comLojas.map((c) => ({

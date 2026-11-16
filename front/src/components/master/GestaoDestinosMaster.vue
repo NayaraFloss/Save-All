@@ -7,7 +7,7 @@ import { useQuasar } from "quasar";
 import { storeToRefs } from "pinia";
 import { useAppStore } from "../../stores/estadoApp";
 import { servicoDoacoes } from "../../services/servicoDoacoes";
-import { CITIES } from "../../utils/cidades";
+import { cidadesDasLojas } from "../../utils/cidades";
 
 const $q = useQuasar();
 const appStore = useAppStore();
@@ -30,13 +30,8 @@ onMounted(() => {
 });
 onUnmounted(() => window.removeEventListener("saveall_dados_atualizados", carregar));
 
-// Cidades: as das lojas cadastradas, as de referência e as já usadas em destinos
-const opcoesCidade = computed(() => {
-  const nomes = new Set(CITIES);
-  (stores.value || []).forEach((l) => l.city && nomes.add(l.city));
-  destinos.value.forEach((d) => d.city && nomes.add(`${d.city}, ${d.state || "SC"}`));
-  return [...nomes].sort((a, b) => a.localeCompare(b));
-});
+// Cidades: só as que têm loja cadastrada (cresce sozinha quando entra uma cidade nova)
+const opcoesCidade = computed(() => [...cidadesDasLojas(stores.value)].sort((a, b) => a.localeCompare(b)));
 const filtroCidade = ref(null);
 const busca = ref("");
 const filtrados = computed(() => {

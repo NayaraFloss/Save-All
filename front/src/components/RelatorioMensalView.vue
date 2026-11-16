@@ -5,10 +5,10 @@ import {
 } from "../services/servicoRelatorioMensal";
 import { storeToRefs } from "pinia";
 import ExplicacaoImpacto from "./ExplicacaoImpacto.vue";
-import { CITIES } from "../utils/cidades";
+import { cidadesDasLojas } from "../utils/cidades";
 import { useAppStore } from "../stores/estadoApp";
 const props = defineProps({ mode: { type: String, default: "client" }, storeIdOrName: String, clienteId: String, nomeCliente: String, modoEscuro: { type: Boolean, default: false }, compact: { type: Boolean, default: false } });
-const { orders, usuarioAtual } = storeToRefs(useAppStore());
+const { orders, usuarioAtual, stores } = storeToRefs(useAppStore());
 const mesAtual = () => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -164,10 +164,10 @@ const handleDownloadPdf = () => {
   const entityName = props.mode === "master" ? selectedCityFilter.value !== "all" ? `Cidade: ${selectedCityFilter.value}` : "SaveAll Master - Rede Consolidada" : props.mode === "store" ? props.storeIdOrName || "Estabelecimento Parceiro" : props.nomeCliente || usuarioAtual.value?.name || "Consumidor SaveAll";
   servicoRelatorioMensal.downloadPdfReport(reportData.value, props.mode, entityName);
 };
-const cityOptions = [
+const cityOptions = computed(() => [
   { label: "\u{1F30E} Todas as Cidades (Consolidado da Rede)", value: "all" },
-  ...CITIES.map((c) => ({ label: `\u{1F4CD} ${c}`, value: c }))
-];
+  ...cidadesDasLojas(stores.value).map((c) => ({ label: `\u{1F4CD} ${c}`, value: c }))
+]);
 const typeOptions = [
   { label: "Todos os Eventos (Vendas, Doações e Descartes)", value: "all" },
   { label: "🛒 Apenas Vendas com Desconto", value: "venda" },

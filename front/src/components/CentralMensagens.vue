@@ -52,7 +52,7 @@ const sincronizar = () => {
   if (!document.hidden) mensageria.sincronizar()
 }
 let temporizador = null
-// Pedidos mudam mais rápido: confere a cada 15 segundos (só com a aba visível)
+// Pedidos mudam mais rápido: confere a cada 5 segundos (só com a aba visível)
 const sincronizarPedidos = () => {
   if (!document.hidden) mensageria.sincronizarPedidos()
 }
@@ -64,7 +64,7 @@ onMounted(() => {
   mensageria.sincronizar()
   // A cada minuto, ao voltar para a aba e quando outra aba grava dados.
   temporizador = setInterval(sincronizar, 60000)
-  temporizadorPedidos = setInterval(sincronizarPedidos, 15000)
+  temporizadorPedidos = setInterval(sincronizarPedidos, 5000)
   document.addEventListener('visibilitychange', sincronizar)
   window.addEventListener('focus', sincronizar)
   window.addEventListener('storage', atualizar)

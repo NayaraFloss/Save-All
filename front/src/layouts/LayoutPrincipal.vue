@@ -83,7 +83,7 @@
       v-if="isClient"
       :show="!!pedidoParaAvaliar && !showTermsOverlay && !route.meta?.entry"
       :order="pedidoParaAvaliar"
-      @close="dispensarAvaliacaoAtual"
+      @close="fecharAvaliacao"
       @submitted="loadOrders"
     />
 
@@ -112,7 +112,7 @@ const route = useRoute()
 const router = useRouter()
 const appStore = useAppStore()
 const { usuarioAtual, modoEscuro } = storeToRefs(appStore)
-const { alternarModoEscuro, logout, pedirInicio, dispensarAvaliacaoAtual, loadOrders } = appStore
+const { alternarModoEscuro, logout, pedirInicio, fecharAvaliacao, loadOrders } = appStore
 const { pedidoParaAvaliar } = storeToRefs(appStore)
 
 // shell-wide: painéis administrativos / páginas públicas (até 1280px)
