@@ -5,7 +5,6 @@ import { storeToRefs } from "pinia";
 import { useRoute } from "vue-router";
 import { useAppStore } from "../stores/estadoApp.js";
 import { canEvaluateOrder, getRemainingRatingMinutes } from "../utils/utilitariosAvaliacaoPedido.js";
-import AvaliacaoPedidoModal from "../components/AvaliacaoPedidoModal.vue";
 import { ocultarSurpresa } from "../utils/pedidoSurpresa.js";
 const appStore = useAppStore();
 const { orders: pedidosBrutos } = storeToRefs(appStore);
@@ -14,8 +13,6 @@ const orders = computed(() => pedidosBrutos.value.map(ocultarSurpresa));
 const { setScreen, updateOrderStatus, loadOrders, triggerNotification } = appStore;
 const selectedOrderId = ref(null);
 const selectedCompletedOrderId = ref(null);
-const showRatingModal = ref(false);
-const selectedRatingOrder = ref(null);
 const searchQuery = ref("");
 // O menu de baixo abre esta tela em três modos: ?aba=acompanhar (só em andamento),
 // ?aba=historico (só entregues) ou sem aba (todos).
@@ -32,8 +29,7 @@ const handleOpenRating = (order) => {
     triggerNotification("Ap\xF3s 1 hora da entrega, n\xE3o \xE9 mais permitido avaliar o pedido.", "info");
     return;
   }
-  selectedRatingOrder.value = order;
-  showRatingModal.value = true;
+  appStore.abrirAvaliacao(order);
 };
 let intervalId = null;
 // Todos os pedidos que ainda não foram entregues ficam em andamento e podem ser acompanhados
@@ -721,12 +717,6 @@ const formatItemName = (name) => {
       </q-card>
     </q-dialog>
 
-    <AvaliacaoPedidoModal
-      :show="showRatingModal"
-      :order="selectedRatingOrder"
-      @close="showRatingModal = false"
-      @submitted="loadOrders"
-    />
   </q-page>
 </template>
 

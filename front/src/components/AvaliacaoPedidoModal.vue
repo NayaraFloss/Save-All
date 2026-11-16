@@ -100,7 +100,7 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <q-dialog :model-value="show && !!order" persistent @update:model-value="(v) => { if (!v) emit('close') }">
+  <q-dialog :model-value="show && !!order" @update:model-value="(v) => { if (!v) emit('close') }">
     <q-card v-if="order" class="avaliacao-card column no-wrap" :dark="isDark">
       <q-card-section class="row items-center justify-between q-pa-md avaliacao-header">
         <div class="row items-center q-gutter-sm no-wrap">

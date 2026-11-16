@@ -8,7 +8,6 @@ import { storeToRefs } from "pinia";
 import { useAppStore } from "../stores/estadoApp";
 import { servicoRelatorioMensal } from "../services/servicoRelatorioMensal";
 import RelatorioMensalView from "../components/RelatorioMensalView.vue";
-import AvaliacaoPedidoModal from "../components/AvaliacaoPedidoModal.vue";
 import ModalLojasVisualizacao from "../components/ModalLojasVisualizacao.vue";
 import ModalItensVisualizacao from "../components/ModalItensVisualizacao.vue";
 import PontosExplicacaoDialog from "../components/PontosExplicacaoDialog.vue";
@@ -18,8 +17,6 @@ const router = useRouter();
 const route = useRoute();
 const showStoresViewModal = ref(false);
 const showItemsViewModal = ref(false);
-const showRatingModal = ref(false);
-const selectedRatingOrder = ref(null);
 const appStore = useAppStore();
 const { usuarioAtual, stores, foods, modoEscuro, notificationsEnabled, selectedCity } = storeToRefs(appStore);
 const {
@@ -914,13 +911,6 @@ const clientWaterSavedLitres = computed(() => {
       </q-card>
     </q-dialog>
 
-    <!-- MODAL DE AVALIAÇÃO -->
-    <AvaliacaoPedidoModal
-      :show="showRatingModal"
-      :order="selectedRatingOrder"
-      @close="showRatingModal = false"
-      @submitted="showRatingModal = false; loadOrders()"
-    />
 
     <ModalLojasVisualizacao :show="showStoresViewModal" :dark-mode="modoEscuro" @close="showStoresViewModal = false" />
     <ModalItensVisualizacao :show="showItemsViewModal" :dark-mode="modoEscuro" @close="showItemsViewModal = false" />

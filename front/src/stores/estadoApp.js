@@ -56,9 +56,20 @@ export const useAppStore = defineStore('app', () => {
   const abrirAvaliacao = (pedido) => {
     if (pedido) pedidoParaAvaliar.value = pedido
   }
+  // Pedidos que a pessoa já fechou nesta sessão: nunca reabrem sozinhos, mesmo que a lista de
+  // "oferecidas" salva no servidor seja recarregada antes de a gravação terminar.
+  const avaliacoesFechadasSessao = new Set()
   const fecharAvaliacao = () => {
-    if (pedidoParaAvaliar.value) marcarAvaliacaoOferecida(pedidoParaAvaliar.value.id)
+    const atual = pedidoParaAvaliar.value
     pedidoParaAvaliar.value = null
+    if (atual) {
+      avaliacoesFechadasSessao.add(String(atual.id))
+      try {
+        marcarAvaliacaoOferecida(atual.id)
+      } catch (erro) {
+        console.warn('[avaliacao] não foi possível registrar a oferta:', erro)
+      }
+    }
   }
   const detectarEntregas = (lista) => {
     if (pedidoParaAvaliar.value) return
@@ -68,7 +79,8 @@ export const useAppStore = defineStore('app', () => {
         ord.status === 'delivered' &&
         !ord.notaComida &&
         canEvaluateOrder(ord) &&
-        !oferecidas.includes(String(ord.id)),
+        !oferecidas.includes(String(ord.id)) &&
+        !avaliacoesFechadasSessao.has(String(ord.id)),
     )
     if (pendente) pedidoParaAvaliar.value = pendente
   }
