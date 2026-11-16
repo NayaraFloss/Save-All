@@ -152,6 +152,19 @@ const pfxFileData = ref("");
 // Registros ESG de doação/descarte: carregados do servidor e salvos nele a cada alteração.
 onMounted(() => {
   disposalLogs.value = armazem.colecao("esg_disposal_logs");
+  // Certificados de doação já emitidos: alinha as assinaturas com as do termo (oferta)
+  try {
+    const ofertas = servicoDoacoes.getDonationOffers();
+    disposalLogs.value.forEach((log) => {
+      if (log.type !== "donation" || !log.ofertaId) return;
+      const oferta = ofertas.find((o) => o.id === log.ofertaId);
+      if (!oferta) return;
+      if (oferta.signatureImage && log.coSignerSignatureImage !== oferta.signatureImage) log.coSignerSignatureImage = oferta.signatureImage;
+      if (oferta.donorSignatureImage && log.signatureImage !== oferta.donorSignatureImage) log.signatureImage = oferta.donorSignatureImage;
+    });
+  } catch {
+    // sem ofertas carregadas: mantém os registros como estão
+  }
 });
 watch(disposalLogs, (newVal) => {
   armazem.salvarColecao("esg_disposal_logs", newVal);
@@ -365,11 +378,14 @@ const handleEntregaConfirmada = async (oferta) => {
     storeCnpj: oferta.storeCnpj,
     recipientOrganization: oferta.recipientOrg,
     recipientCnpj: oferta.recipientCnpj,
-    recipientRepresentativeName: oferta.signatureName || "",
+    recipientRepresentativeName: oferta.confirmedBy || oferta.signatureName || "",
     recipientRepresentativeCpf: oferta.signatureCpf || "",
     signatureName: oferta.donorSignedBy || oferta.nomeLoja,
     signatureImage: oferta.donorSignatureImage || "",
     signatureType: oferta.donorSignatureType || "",
+    // Assinatura da entidade: a mesma gravada no termo
+    coSignerName: oferta.confirmedBy || oferta.signatureName || "",
+    coSignerSignatureImage: oferta.signatureImage || "",
     weightEstimatedKg: Number(oferta.weightEstimatedKg) || 1,
     date: oferta.entregueEm || new Date().toISOString(),
     sha256: oferta.signatureHash || oferta.donorAuthCode || ""

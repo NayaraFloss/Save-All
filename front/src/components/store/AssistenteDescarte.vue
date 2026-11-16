@@ -570,10 +570,8 @@ const handleDownloadPdfStep3 = () => {
   doc.line(20, currentY, 190, currentY);
   currentY += 8;
   const sigBoxY = currentY;
-  // Linhas pequenas sob o nome (entidade/loja e documento), cortadas para caber na caixa
-  const linhaCurta = (texto) => doc.splitTextToSize(String(texto || ""), 74)[0] || "";
   doc.setDrawColor(220, 220, 220);
-  doc.roundedRect(20, sigBoxY, 80, 41, 2, 2, "D");
+  doc.roundedRect(20, sigBoxY, 80, 35, 2, 2, "D");
   if (log.signatureImage) {
     try {
       doc.addImage(log.signatureImage, "PNG", 22, sigBoxY + 2, 76, 15);
@@ -591,16 +589,9 @@ const handleDownloadPdfStep3 = () => {
   doc.text(log.signatureName || "Doador", 60, sigBoxY + 30, { align: "center" });
   doc.setFont("Helvetica", "normal");
   doc.setFontSize(7);
-  doc.text("Assinatura digital \u2014 doador", 60, sigBoxY + 33.5, { align: "center" });
-  const doadorLinha = [log.nomeLoja, log.storeCnpj ? `CNPJ ${log.storeCnpj}` : ""].filter(Boolean).join(" \u2014 ");
-  if (doadorLinha) {
-    doc.setFontSize(6.5);
-    doc.setTextColor(110, 110, 110);
-    doc.text(linhaCurta(doadorLinha), 60, sigBoxY + 37.5, { align: "center" });
-    doc.setTextColor(50, 50, 50);
-  }
+  doc.text("Assinatura digital \u2014 doador", 60, sigBoxY + 33, { align: "center" });
   doc.setDrawColor(220, 220, 220);
-  doc.roundedRect(110, sigBoxY, 80, 41, 2, 2, "D");
+  doc.roundedRect(110, sigBoxY, 80, 35, 2, 2, "D");
   if (isDonation) {
     if (log.coSignerSignatureImage) {
       try {
@@ -622,20 +613,10 @@ const handleDownloadPdfStep3 = () => {
     doc.setFont("Helvetica", "bold");
     doc.setFontSize(8);
     doc.setTextColor(50, 50, 50);
-    doc.text(linhaCurta(log.recipientRepresentativeName || "Respons\xE1vel Retirada"), 150, sigBoxY + 30, { align: "center" });
+    doc.text(log.recipientRepresentativeName || "Respons\xE1vel Retirada", 150, sigBoxY + 30, { align: "center" });
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(7);
-    doc.text("Respons\xE1vel pelo recebimento \u2014 assinatura digital", 150, sigBoxY + 33.5, { align: "center" });
-    const entidadeLinha = [
-      log.recipientOrganization,
-      log.recipientCnpj ? `CNPJ/CPF ${log.recipientCnpj}` : log.recipientRepresentativeCpf ? `CPF ${log.recipientRepresentativeCpf}` : ""
-    ].filter(Boolean).join(" \u2014 ");
-    if (entidadeLinha) {
-      doc.setFontSize(6.5);
-      doc.setTextColor(110, 110, 110);
-      doc.text(linhaCurta(entidadeLinha), 150, sigBoxY + 37.5, { align: "center" });
-      doc.setTextColor(50, 50, 50);
-    }
+    doc.text("Assinatura digital \u2014 entidade receptora", 150, sigBoxY + 33, { align: "center" });
   } else {
     if (log.coSignerSignatureImage) {
       try {
@@ -662,7 +643,7 @@ const handleDownloadPdfStep3 = () => {
     doc.setFontSize(7);
     doc.text("Ateste t\xE9cnico de descarte", 150, sigBoxY + 33, { align: "center" });
   }
-  currentY = sigBoxY + 47;
+  currentY = sigBoxY + 41;
   doc.setFont("Courier", "bold");
   doc.setFontSize(8);
   doc.setTextColor(themeR, themeG, themeB);
@@ -704,6 +685,9 @@ const handleCompleteWizard = () => {
   `;
   const calculatedHash = generateSHA256Hash(docToHash);
   generatedSHA256.value = calculatedHash;
+  // Doação com consulta: as assinaturas do certificado são as mesmas gravadas no termo (oferta),
+  // para os dois documentos nunca divergirem.
+  const ofertaAssinada = selectedType.value === "donation" && consultaEmAndamento ? consultaVinculada : null;
   const finalLog = {
     id: saveAllCode,
     foodId: itensLote.value[0]?.id || "manual",
@@ -729,11 +713,11 @@ const handleCompleteWizard = () => {
     discardTechnicalCpf: selectedType.value === "discard" ? discardTechnicalCpf.value : "",
     discardDestinationType: selectedType.value === "discard" ? discardDestinationType.value : "",
     signatureName: signatureName.value || usuarioAtual.value?.name || "Assinante Loja",
-    signatureImage: tempSignatureImage.value,
+    signatureImage: ofertaAssinada?.donorSignatureImage || tempSignatureImage.value,
     signatureType: activeSignatureTypeSelection.value,
     signatureCertificate: customDigitalCertificate.value,
-    coSignerName: tempCoSignerName.value || "Triador Respons\xE1vel",
-    coSignerSignatureImage: tempCoSignerSignatureImage.value,
+    coSignerName: (ofertaAssinada && (ofertaAssinada.confirmedBy || ofertaAssinada.signatureName)) || tempCoSignerName.value || "Triador Respons\xE1vel",
+    coSignerSignatureImage: ofertaAssinada?.signatureImage || tempCoSignerSignatureImage.value,
     weightEstimatedKg: Number(weightEstimated.value) || 1,
     date: now.toISOString(),
     sha256: calculatedHash
@@ -916,7 +900,7 @@ const disposalPartnerOptions = computed(() =>
                   <a href="#" class="text-primary" @click.prevent="weightEstimated = pesoCalculado">Usar o calculado</a>
                 </div>
               </div>
-              <div v-if="!ofertaTravada" class="row items-center q-gutter-x-md">
+              <div v-if="!ofertaTravada" class="row items-center no-wrap weight-row">
                 <q-slider
                   v-model="weightEstimated"
                   :min="0.1"
@@ -953,6 +937,8 @@ const disposalPartnerOptions = computed(() =>
                 <q-select
                   v-else
                   v-model="recipientOrg"
+                  class="partner-select"
+                  popup-content-class="partner-select-menu"
                   :disable="ofertaTravada"
                   :options="socialPartnerOptions"
                   emit-value
@@ -1058,6 +1044,8 @@ const disposalPartnerOptions = computed(() =>
                 <q-select
                   v-else
                   v-model="discardDestination"
+                  class="partner-select"
+                  popup-content-class="partner-select-menu"
                   :options="disposalPartnerOptions"
                   emit-value
                   map-options
@@ -1266,21 +1254,110 @@ const disposalPartnerOptions = computed(() =>
 <style scoped lang="scss">
 .wizard-card {
   width: 100%;
-  max-width: 400px;
+  max-width: min(520px, 100%);
   max-height: 92vh;
+  max-height: 92dvh;
+  min-width: 0;
   border-radius: 24px;
   overflow: hidden;
 }
 .wizard-stepper {
   background: transparent;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
   :deep(.q-stepper__header) {
     min-height: 0;
   }
   :deep(.q-stepper__tab) {
     padding: 12px 8px;
   }
+  :deep(.q-stepper__content),
+  :deep(.q-panel),
+  :deep(.q-stepper__step-content) {
+    min-width: 0;
+    max-width: 100%;
+  }
   :deep(.q-stepper__step-inner) {
     padding: 16px 20px 20px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  // Todo texto longo (endereço, licença, nomes) quebra linha em vez de vazar
+  :deep(.column),
+  :deep(.row),
+  :deep(.col),
+  :deep(.q-card),
+  :deep(.q-card__section),
+  :deep(.q-banner__content) {
+    min-width: 0;
+    max-width: 100%;
+  }
+  :deep(.text-caption),
+  :deep(strong),
+  :deep(.q-banner__content),
+  :deep(.q-chip__content),
+  :deep(.q-badge) {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  :deep(.q-badge) {
+    height: auto;
+    max-width: 100%;
+    white-space: normal;
+    text-align: left;
+    padding: 3px 6px;
+  }
+  :deep(.q-chip) {
+    height: auto;
+    min-height: 24px;
+    max-width: 100%;
+    white-space: normal;
+  }
+  :deep(.q-banner) {
+    min-height: 0;
+  }
+  :deep(.q-banner__avatar) {
+    align-self: flex-start;
+  }
+  :deep(.q-btn) {
+    max-width: 100%;
+  }
+  :deep(.q-btn__content) {
+    flex-wrap: nowrap;
+    text-align: center;
+  }
+}
+.partner-select {
+  max-width: 100%;
+  :deep(.q-field__control) {
+    height: auto;
+    min-height: 40px;
+  }
+  :deep(.q-field__native) {
+    min-width: 0;
+    white-space: normal;
+    line-height: 1.3;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  :deep(.q-field__native > span) {
+    overflow-wrap: anywhere;
+  }
+}
+.weight-row {
+  gap: 16px;
+  :deep(.q-slider) {
+    min-width: 0;
+  }
+}
+@media (max-width: 599px) {
+  .wizard-card {
+    border-radius: 20px;
+  }
+  .wizard-stepper :deep(.q-stepper__step-inner) {
+    padding: 14px 14px 18px;
   }
 }
 .label-wide {
@@ -1348,6 +1425,16 @@ const disposalPartnerOptions = computed(() =>
 .body--dark & {
   .signature-preview {
     border-color: rgba(255, 255, 255, 0.2);
+  }
+}
+</style>
+
+<style lang="scss">
+.partner-select-menu {
+  max-width: calc(100vw - 32px) !important;
+  .q-item__label {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 </style>
