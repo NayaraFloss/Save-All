@@ -14,8 +14,8 @@ const router = useRouter();
 const $q = useQuasar();
 defineOptions({ name: "FinalizarPedidoPage" });
 const appStore = useAppStore();
-const { cart, orders, stores, cartStoreId, usuarioAtual, selectedCity, modoEscuro } = storeToRefs(appStore);
-const { getCartSubtotal, submitOrder, triggerNotification, clearCart } = appStore;
+const { cart, orders, stores, cartStoreId, usuarioAtual, selectedCity, modoEscuro, enderecoEntrega } = storeToRefs(appStore);
+const { getCartSubtotal, submitOrder, triggerNotification, clearCart, definirEnderecoEntrega } = appStore;
 // Desiste deste pedido: tira os itens e volta para as lojas
 const removerItensDoPedido = () => {
   const eraSurpresa = cart.value.length > 0 && cart.value.every((item) => item.surpresa);
@@ -45,15 +45,47 @@ const confirmedDiscount = ref(0);
 const isDesktop = computed(() => $q.screen.gt.sm);
 
 // ---------- Endereço e frete ----------
-const deliveryAddress = computed(() => usuarioAtual.value?.address || "");
+// Endereço do cadastro = padrão; o cliente pode escolher outro (ou incluir um novo) só para este pedido
+const enderecoCadastro = computed(() => usuarioAtual.value?.address || "");
+const deliveryAddress = computed(() => enderecoEntrega.value?.full || enderecoCadastro.value);
+const usandoCadastro = computed(() => !enderecoEntrega.value);
 const orderCityName = computed(() => getCityName(selectedCity.value));
 // O endereço de entrega precisa ser da mesma cidade em que o pedido foi feito
 const addressOk = computed(() => !!deliveryAddress.value && addressMatchesCity(deliveryAddress.value, selectedCity.value));
 // Dados estruturados só valem se ainda correspondem ao endereço salvo
 const addressData = computed(() => {
+  const escolhido = enderecoEntrega.value;
+  if (escolhido) return escolhido.street ? escolhido : null;
   const d = usuarioAtual.value?.addressData;
   return d && d.full === deliveryAddress.value ? d : null;
 });
+// Opções de entrega: o endereço do cadastro (padrão) e os endereços já salvos
+const opcoesEndereco = computed(() => {
+  const lista = [];
+  const vistos = new Set();
+  const norm = (t) => String(t || "").trim().toLowerCase();
+  const user = usuarioAtual.value;
+  if (user?.address) {
+    const estruturado = user.addressData?.full === user.address ? user.addressData : {};
+    lista.push({ id: "cadastro", ...estruturado, full: user.address, rotulo: "Endere\xE7o do cadastro (padr\xE3o)", padrao: true });
+    vistos.add(norm(user.address));
+  }
+  (user?.savedAddresses || []).forEach((a) => {
+    if (!a?.full || vistos.has(norm(a.full))) return;
+    vistos.add(norm(a.full));
+    lista.push({ ...a, rotulo: "Endere\xE7o salvo", padrao: false });
+  });
+  return lista;
+});
+const opcaoSelecionada = (opcao) => (opcao.padrao ? usandoCadastro.value : enderecoEntrega.value?.full === opcao.full);
+const escolherEndereco = (opcao) => {
+  if (!addressMatchesCity(opcao.full, selectedCity.value)) {
+    triggerNotification(`Seu pedido \xE9 em ${selectedCity.value}. Este endere\xE7o \xE9 de outra cidade.`, "warning");
+    return;
+  }
+  definirEnderecoEntrega(opcao.padrao ? null : opcao);
+};
+const incluirEndereco = () => router.push({ name: "SelecaoEndereco", query: { origem: "checkout" } });
 const cartStore = computed(() => (stores.value || []).find((s) => s.id === cartStoreId.value));
 const feeInfo = computed(() =>
   calculateDeliveryFee(cartStore.value?.deliveryConfig, {
@@ -193,9 +225,9 @@ const handleClosePdfModal = () => {
                     :outline="addressOk"
                     :unelevated="!addressOk"
                     class="text-weight-bold q-px-md"
-                    :icon="deliveryAddress ? 'edit_location_alt' : 'add_location_alt'"
-                    :label="deliveryAddress ? 'Alterar' : 'Cadastrar'"
-                    @click="router.push({ name: 'SelecaoEndereco' })"
+                    icon="add_location_alt"
+                    label="Incluir endereço"
+                    @click="incluirEndereco"
                   />
                 </div>
 
@@ -224,6 +256,40 @@ const handleClosePdfModal = () => {
                   <q-icon name="check_circle" size="18px" class="q-mr-xs" />
                   Endereço dentro da cidade do pedido ({{ selectedCity }})
                 </div>
+                <q-badge
+                  v-if="deliveryAddress"
+                  :color="usandoCadastro ? 'green-1' : 'blue-1'"
+                  :text-color="usandoCadastro ? 'positive' : 'primary'"
+                  class="q-mt-sm text-weight-bold"
+                >
+                  {{ usandoCadastro ? "Endereço do cadastro (padrão)" : "Endereço escolhido para este pedido" }}
+                </q-badge>
+
+                <!-- Trocar para outro endereço já salvo, só para este pedido -->
+                <q-list v-if="opcoesEndereco.length > 1" separator bordered class="rounded-borders q-mt-md">
+                  <q-item
+                    v-for="opcao in opcoesEndereco"
+                    :key="opcao.id || opcao.full"
+                    clickable
+                    v-ripple
+                    :class="{ 'opacity-60': !addressMatchesCity(opcao.full, selectedCity) }"
+                    @click="escolherEndereco(opcao)"
+                  >
+                    <q-item-section avatar>
+                      <q-icon :name="opcaoSelecionada(opcao) ? 'radio_button_checked' : 'radio_button_unchecked'" :color="opcaoSelecionada(opcao) ? 'positive' : 'grey-6'" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label class="text-weight-medium">
+                        <template v-if="opcao.street">{{ opcao.street }}, {{ opcao.noNumber ? "S/N" : opcao.number }} · {{ opcao.neighborhood }}</template>
+                        <template v-else>{{ opcao.full }}</template>
+                      </q-item-label>
+                      <q-item-label caption>{{ opcao.rotulo }}</q-item-label>
+                      <q-item-label v-if="!addressMatchesCity(opcao.full, selectedCity)" caption class="text-negative">
+                        Outra cidade — indisponível para este pedido
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
               </q-card-section>
             </q-card>
 
@@ -596,6 +662,9 @@ const handleClosePdfModal = () => {
   letter-spacing: 0.04em;
 }
 
+.opacity-60 {
+  opacity: 0.6;
+}
 .address-lines {
   margin-top: 4px;
 }

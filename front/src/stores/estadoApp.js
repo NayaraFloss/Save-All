@@ -30,6 +30,11 @@ export const useAppStore = defineStore('app', () => {
   const pedidosCarregados = ref(false)
   const cart = ref([])
   const cartStoreId = ref(null)
+  // Endereço de entrega escolhido só para o pedido em andamento. Vazio = vale o endereço do cadastro (padrão).
+  const enderecoEntrega = ref(null)
+  const definirEnderecoEntrega = (endereco) => {
+    enderecoEntrega.value = endereco && endereco.full ? { ...endereco } : null
+  }
   const cartStoreName = ref(null)
   // Sacola Surpresa montada com o máximo disponível (o cliente pediu mais do que há hoje)
   const sacolaMaxima = ref(null)
@@ -356,6 +361,7 @@ export const useAppStore = defineStore('app', () => {
     }
   }
   const clearCart = () => {
+    enderecoEntrega.value = null
     cart.value = []
     cartStoreId.value = null
     cartStoreName.value = null
@@ -495,14 +501,16 @@ export const useAppStore = defineStore('app', () => {
         nomeLoja: cartStoreName.value,
         items: cart.value,
         // Sacola Surpresa: a visão do cliente esconde a loja e os produtos
-        ...(cart.value.length > 0 && cart.value.every((item) => item.surpresa) ? { surpresa: true } : {}),
+        ...(cart.value.length > 0 && cart.value.every((item) => item.surpresa)
+          ? { surpresa: true }
+          : {}),
         subtotal,
         taxaEntrega,
         descontoPontos,
         pontosUsados,
         total,
         formaPagamento,
-        address: usuarioAtual.value.address || '',
+        address: enderecoEntrega.value?.full || usuarioAtual.value.address || '',
       }
       const result = await orderService.createOrder(payload)
       clearCart()
@@ -562,7 +570,8 @@ export const useAppStore = defineStore('app', () => {
         usuarioAtual.value = freshUser
       }
       // Avaliação enviada: fecha o pop-up global na hora (o pedido já tem nota e não é oferecido de novo)
-      if (pedidoParaAvaliar.value && String(pedidoParaAvaliar.value.id) === String(id)) fecharAvaliacao()
+      if (pedidoParaAvaliar.value && String(pedidoParaAvaliar.value.id) === String(id))
+        fecharAvaliacao()
       triggerNotification(
         'Avalia\xE7\xE3o enviada com sucesso! Obrigado pelo feedback \u{1F331}',
         'success',
@@ -625,6 +634,8 @@ export const useAppStore = defineStore('app', () => {
     removeFromCart,
     updateCartQty,
     clearCart,
+    enderecoEntrega,
+    definirEnderecoEntrega,
     getCartSubtotal,
     loadFoods,
     addNewFoodItem,
