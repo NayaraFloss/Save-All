@@ -9,7 +9,7 @@ const router = useRouter();
 const appStore = useAppStore();
 const { stores, foods, selectedCity } = storeToRefs(appStore);
 const { setSelectedCity, storeBelongsToCity } = appStore;
-const cidadesAtendidas = computed(() => cidadesDasLojas(stores.value));
+const cidadesAtendidas = computed(() => cidadesDasLojas(stores.value, { paraCliente: true }));
 const search = ref("");
 const storeTab = ref("hoje");
 const storesInCurrentCity = computed(() => {

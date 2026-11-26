@@ -7,7 +7,7 @@ import { foodService } from 'src/services/servicoAlimentos'
 import { orderService } from 'src/services/servicoPedidos'
 import { storeService } from 'src/services/servicoLojas'
 import { canEvaluateOrder } from 'src/utils/utilitariosAvaliacaoPedido'
-import { CITIES, storeBelongsToCity, cidadesComAlimentos, cidadesDasLojas } from 'src/utils/cidades'
+import { CITIES, storeBelongsToCity, cidadesComAlimentos, cidadesDasLojas, cidadeForaDaRegiao } from 'src/utils/cidades'
 import { armazem } from 'src/services/armazemServidor'
 
 export const useAppStore = defineStore('app', () => {
@@ -108,7 +108,8 @@ export const useAppStore = defineStore('app', () => {
     const prefs = armazem.dado('preferencias', {})
     if (typeof prefs.modoEscuro === 'boolean') modoEscuro.value = prefs.modoEscuro
     if (typeof prefs.notificacoes === 'boolean') notificationsEnabled.value = prefs.notificacoes
-    if (typeof prefs.cidade === 'string' && prefs.cidade) selectedCity.value = prefs.cidade
+    // Cidade salva antes (ex.: Florianópolis) que saiu da região atendida volta para Pinhalzinho
+    if (typeof prefs.cidade === 'string' && prefs.cidade && !cidadeForaDaRegiao(prefs.cidade)) selectedCity.value = prefs.cidade
   }
   // Busca no servidor os dados do usuário (coleções e preferências) antes de abrir as telas.
   const carregarDadosDoUsuario = async (user) => {
@@ -116,6 +117,8 @@ export const useAppStore = defineStore('app', () => {
     aplicarPreferencias()
   }
   const setSelectedCity = (city) => {
+    // Cidades fora da região não podem ser escolhidas pelo cliente
+    if (cidadeForaDaRegiao(city)) city = CITIES[0]
     selectedCity.value = city
     salvarPreferencias()
     triggerNotification(`Cidade alterada para ${city} \u{1F4CD}`, 'success')
@@ -590,8 +593,9 @@ export const useAppStore = defineStore('app', () => {
 
   // Só aparecem cidades com alimentos à venda (conforme o banco); se a cidade escolhida deixar de ter, troca para a primeira disponível
   // Cidades atendidas = onde há loja cadastrada (cresce sozinha quando uma loja de cidade nova se cadastra)
-  const cidadesAtendidas = computed(() => cidadesDasLojas(stores.value))
-  const cidadesDisponiveis = computed(() => cidadesComAlimentos(stores.value, foods.value))
+  // paraCliente: Florianópolis, Porto Alegre e São Paulo não aparecem para o cliente
+  const cidadesAtendidas = computed(() => cidadesDasLojas(stores.value, { paraCliente: true }))
+  const cidadesDisponiveis = computed(() => cidadesComAlimentos(stores.value, foods.value, { paraCliente: true }))
   watch(cidadesDisponiveis, (lista) => {
     if (lista.length && !lista.includes(selectedCity.value)) setSelectedCity(lista[0])
   })

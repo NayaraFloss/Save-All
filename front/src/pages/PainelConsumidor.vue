@@ -48,7 +48,8 @@ const citySearch = ref("");
 const normalizeText = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 const filteredCities = computed(() => {
   const term = normalizeText(citySearch.value).trim();
-  const cidades = cidadesDasLojas(stores.value);
+  // Florianópolis, Porto Alegre e São Paulo não aparecem para o cliente
+  const cidades = cidadesDasLojas(stores.value, { paraCliente: true });
   if (!term) return cidades;
   return cidades.filter((c) => normalizeText(c).includes(term));
 });

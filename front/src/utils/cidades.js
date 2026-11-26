@@ -6,6 +6,10 @@ export const CITIES = [
   'Chapec\xF3, SC',
 ]
 
+// Cidades fora da região atendida: NÃO aparecem para o cliente (seletor de cidade, lojas, sacola surpresa),
+// mesmo que ainda existam lojas antigas cadastradas nelas no banco.
+export const CIDADES_FORA_DA_REGIAO = ['florianopolis', 'porto alegre', 'sao paulo']
+
 const semAcento = (t) =>
   String(t || '')
     .normalize('NFD')
@@ -26,6 +30,9 @@ export const cidadeNoEndereco = (endereco) => {
 
 const nomeDaCidade = (c) => semAcento(String(c || '').split(',')[0].split('/')[0].trim())
 
+// A cidade está fora da região atendida (Florianópolis, Porto Alegre, São Paulo)?
+export const cidadeForaDaRegiao = (c) => CIDADES_FORA_DA_REGIAO.includes(nomeDaCidade(c))
+
 // Cidade da loja no formato "Cidade, UF": a cadastrada; se faltar, a do fim do endereço; sem nenhuma, a principal (Pinhalzinho).
 export const cidadeDaLoja = (loja) => {
   const cadastrada = String(loja?.city || '').trim()
@@ -39,7 +46,8 @@ export const cidadeDaLoja = (loja) => {
 // Cidades atendidas = cidades que têm loja cadastrada. As conhecidas (CITIES) vêm primeiro, na ordem de sempre;
 // uma cidade nova (ex.: Xanxerê) entra sozinha, em ordem alfabética, assim que uma loja dela se cadastra.
 // Enquanto as lojas não carregam, devolve a lista padrão para o seletor não ficar vazio.
-export const cidadesDasLojas = (lojas) => {
+// Com { paraCliente: true } as cidades fora da região (CIDADES_FORA_DA_REGIAO) ficam de fora.
+export const cidadesDasLojas = (lojas, { paraCliente = false } = {}) => {
   if (!lojas?.length) return CITIES
   const achadas = new Map()
   lojas.forEach((loja) => {
@@ -52,7 +60,7 @@ export const cidadesDasLojas = (lojas) => {
     .filter(([chave]) => !CITIES.some((c) => nomeDaCidade(c) === chave))
     .map(([, cidade]) => cidade)
     .sort((a, b) => a.localeCompare(b, 'pt-BR'))
-  const lista = [...conhecidas, ...novas]
+  const lista = [...conhecidas, ...novas].filter((c) => !paraCliente || !cidadeForaDaRegiao(c))
   return lista.length ? lista : CITIES
 }
 
@@ -102,9 +110,9 @@ export const cityToAddressSuffix = (city) => String(city || '').replace(/,\s*/, 
 
 // Cidades com pelo menos um produto à venda no banco (loja da cidade com alimento ativo e em estoque).
 // Enquanto lojas/alimentos não carregarem, devolve a lista completa para o seletor não ficar vazio.
-export const cidadesComAlimentos = (lojas, alimentos) => {
-  if (!lojas?.length || !alimentos?.length) return cidadesDasLojas(lojas)
-  const comAlimentos = cidadesDasLojas(lojas).filter((cidade) =>
+export const cidadesComAlimentos = (lojas, alimentos, opcoes = {}) => {
+  if (!lojas?.length || !alimentos?.length) return cidadesDasLojas(lojas, opcoes)
+  const comAlimentos = cidadesDasLojas(lojas, opcoes).filter((cidade) =>
     lojas.some(
       (loja) =>
         storeBelongsToCity(loja, cidade) &&
@@ -116,5 +124,5 @@ export const cidadesComAlimentos = (lojas, alimentos) => {
         ),
     ),
   )
-  return comAlimentos.length ? comAlimentos : cidadesDasLojas(lojas)
+  return comAlimentos.length ? comAlimentos : cidadesDasLojas(lojas, opcoes)
 }
