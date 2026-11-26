@@ -48,9 +48,9 @@ const cartoes = computed(() => [
       class="contador cursor-pointer"
       @click="emit('abrir', c.destino)"
     >
-      <q-card-section class="row items-center no-wrap q-gutter-x-md">
+      <q-card-section class="row items-center no-wrap contador-corpo">
         <q-avatar size="46px" :style="{ background: c.fundo, color: c.cor }" :icon="c.icone" />
-        <div>
+        <div class="contador-textos">
           <div class="contador-valor text-weight-bold" :style="{ color: c.cor }">{{ c.valor }}</div>
           <div class="text-caption text-weight-bold text-uppercase text-grey-7 contador-rotulo">{{ c.rotulo }}</div>
         </div>
@@ -62,7 +62,7 @@ const cartoes = computed(() => [
 <style scoped lang="scss">
 .contadores {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 .contador {
@@ -80,10 +80,26 @@ const cartoes = computed(() => [
 .contador-rotulo {
   letter-spacing: 0.06em;
   margin-top: 4px;
+  line-height: 1.25;
+}
+.contador-corpo {
+  gap: 12px;
+}
+.contador-textos {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+// Celular: avatar menor e rótulo sem espaçamento extra, para "CONCLUÍDOS" caber inteiro
+@media (max-width: 599px) {
+  .contadores { gap: 8px; }
+  .contador-corpo { padding: 12px 10px; gap: 8px; }
+  .contador :deep(.q-avatar) { font-size: 36px !important; }
+  .contador-valor { font-size: 24px; }
+  .contador-rotulo { letter-spacing: 0; font-size: 11px; overflow-wrap: normal; word-break: keep-all; }
 }
 @media (min-width: 900px) {
   .contadores {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
   }
 }

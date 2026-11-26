@@ -39,9 +39,23 @@ body {
 // ---------------------------------------------------------------
 // Colunas do grid do Quasar podem encolher (texto longo não empurra a linha para fora)
 .row > .col, .row > [class*="col-"], .row > .col-auto { min-width: 0; }
+// Filhos de .column e das pilhas com espaçamento também encolhem até a largura da tela
+.column > *, [class*="q-gutter-y"] > * { min-width: 0; max-width: 100%; }
+// Linhas "no-wrap": blocos de texto simples podem encolher (senão empurram a linha para fora)
+.row.no-wrap > div:not([class*="q-"]), .row.no-wrap > .col, .row.no-wrap > span:not([class*="q-"]) { min-width: 0; }
+// ...menos o valor alinhado à direita (peso, preço, data), que fica inteiro
+.row.no-wrap > .text-right:not(.col) { flex-shrink: 0; max-width: 50%; }
+// Chips com texto longo quebram em duas linhas em vez de sair do cartão
+.q-chip { height: auto; min-height: 24px; }
+.q-chip__content { white-space: normal; line-height: 1.2; padding: 2px 0; }
+// Painéis de abas não rolam de lado: o conteúdo se ajusta à largura
+.q-tab-panels > .q-panel.scroll { overflow-x: hidden; }
+.q-tab-panel { min-width: 0; max-width: 100%; }
+// Itens de q-item (texto ao lado de ícone/avatar) encolhem em vez de empurrar a linha
+.q-item__section--main { min-width: 0; }
 // Cartões, banners e itens de lista respeitam a largura disponível
 .q-card, .q-banner, .q-item, .q-list { max-width: 100%; }
-.q-item__label, .q-banner__content, .q-card__section { overflow-wrap: anywhere; }
+.q-item__label, .q-banner__content, .q-card__section { overflow-wrap: break-word; word-break: normal; }
 // Badges e chips com texto longo quebram linha
 .q-badge { max-width: 100%; white-space: normal; height: auto; }
 .q-chip { max-width: 100%; }
@@ -60,6 +74,17 @@ body {
   .q-menu { max-width: calc(100vw - 16px) !important; }
   // Linhas "no-wrap" com botões quebram no celular quando marcadas como responsivas
   .wrap-xs { flex-wrap: wrap !important; }
+  // Itens de lista com muita informação à direita: a parte da direita desce para a linha de
+  // baixo em vez de espremer o texto principal (nome do produto, entidade etc.)
+  .q-item { flex-wrap: wrap; }
+  .q-item > .q-item__section--main { min-width: min(150px, 55%); }
+  .q-item > .q-item__section--side:not(.q-item__section--avatar) { max-width: 100%; }
+  // Linhas de texto curto com badge: o badge não é espremido letra por letra
+  .q-badge { flex-shrink: 0; max-width: 100%; }
+  // Dicas e erros embaixo dos campos ocupam o espaço real (texto longo não cobre o próximo campo)
+  .q-field--with-bottom { padding-bottom: 0; }
+  .q-field__bottom--animated { position: static; transform: none; }
+  .q-field__bottom { white-space: normal; line-height: 1.25; }
   // Títulos menores
   .text-h5 { font-size: 1.25rem; line-height: 1.6rem; }
   .text-h6 { font-size: 1.05rem; line-height: 1.5rem; }
@@ -69,7 +94,9 @@ body {
 .q-scrollarea__content { max-width: 100% !important; width: 100%; }
 
 // 'clip' evita rolagem lateral sem criar um contêiner de rolagem (mantém sticky funcionando)
-html, body { overflow-x: clip; }
+html, body { overflow-x: hidden; overflow-x: clip; max-width: 100%; }
+// iOS: impede o Safari de aumentar o texto sozinho ao girar a tela
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 img, video { max-width: 100%; }
 
 // Largura total em qualquer tamanho de tela
@@ -120,7 +147,7 @@ img, video { max-width: 100%; }
 .body--dark .app-shell { background: #040c13; }
 
 // Utilitário: lista de cartões que vira grade no notebook
-.desk-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+.desk-grid { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 760px) { .desk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 1100px) { .desk-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 1100px) { .desk-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -139,6 +166,40 @@ img, video { max-width: 100%; }
 .header-slot-center { flex: 1 1 0; min-width: 0; padding: 0 8px; }
 @media (max-width: 599px) {
   .header-title { font-size: 16px; }
+}
+
+
+// ---------------------------------------------------------------
+// iPhone / iPad (Safari)
+// ---------------------------------------------------------------
+// O Safari dá zoom sozinho ao tocar num campo com fonte menor que 16px e não volta ao
+// tamanho normal: a tela fica "maior que o celular". Em telas de toque, campos usam 16px.
+@media (hover: none) and (pointer: coarse) {
+  input, textarea, select,
+  .q-field__native, .q-field__input, .q-select__filter { font-size: 16px !important; }
+}
+// Área segura do iPhone (entalhe e barra inferior)
+.q-header { padding-top: env(safe-area-inset-top, 0px); }
+
+// ---------------------------------------------------------------
+// Barra superior no celular: todos os botões (inclusive Sair) sempre visíveis
+// ---------------------------------------------------------------
+.app-toolbar { min-width: 0; flex-wrap: nowrap; }
+.app-toolbar > .q-btn, .app-toolbar > div > .q-btn, #header-slot-actions, #header-slot-user { flex-shrink: 0; }
+.app-toolbar .q-btn--round.q-btn--dense { min-width: 34px; }
+@media (max-width: 599px) {
+  .app-toolbar { padding: 0 4px; gap: 0; }
+  .app-toolbar .q-btn--dense.q-btn--round { padding: 4px; min-width: 32px; min-height: 32px; }
+  .app-toolbar .q-btn--dense.q-btn--round .q-icon { font-size: 22px; }
+  .header-title { padding: 0 2px; }
+  .header-logo { width: 28px; height: 28px; }
+  .header-slot-center { padding: 0 2px; }
+  .role-chip { max-width: 96px; margin: 0 2px; }
+}
+// Celulares bem estreitos (iPhone SE / mini): esconde o texto "Save All" e deixa só o logo
+@media (max-width: 400px) {
+  .header-title-text { display: none; }
+  .role-chip .chip-name { max-width: 56px; }
 }
 
 // Barras de rolagem

@@ -846,9 +846,17 @@ const calculatedInventory = computed(() => {
 .trecho-2 { background: #fb8c00; }
 .trecho-3 { background: #d32f2f; }
 .trecho-4 { background: #616161; }
+// Celular: as faixas ficam empilhadas (uma por linha), com texto inteiro e legível
 @media (max-width: 599px) {
-  .trecho b { font-size: 10px; }
-  .trecho { font-size: 10px; }
+  .linha-tempo { flex-direction: column; }
+  .trecho {
+    flex: none !important;
+    flex-direction: row;
+    justify-content: space-between;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  .trecho b { font-size: 12px; }
 }
 .save-btn {
   min-width: min(260px, 100%);

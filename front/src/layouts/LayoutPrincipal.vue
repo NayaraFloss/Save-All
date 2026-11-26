@@ -17,7 +17,7 @@
         </q-btn>
         <q-toolbar-title class="font-display text-weight-bold header-title">
           <span class="row items-center no-wrap">
-            <span>Save All</span>
+            <span class="header-title-text">Save All</span>
             <svg class="header-logo q-ml-xs" viewBox="0 0 64 64" fill="none" aria-label="Logo Save All" role="img">
               <path d="M12 28 H52 L46 54 H18 Z" fill="#A5D6A7" opacity="0.9" />
               <path d="M14 30 H50 L45 52 H19 Z" fill="#66BB6A" />

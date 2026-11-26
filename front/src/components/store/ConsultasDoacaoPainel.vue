@@ -336,8 +336,8 @@ const stats = computed(() => {
         :class="['offer-card', `offer-card--${item.status}`]"
       >
         <q-card-section class="q-pb-sm">
-          <div class="row items-start justify-between no-wrap q-gutter-sm">
-            <div class="col">
+          <div class="row items-start justify-between q-gutter-sm linha-consulta">
+            <div class="col linha-consulta__info">
               <div class="row items-center q-gutter-xs q-mb-xs">
                 <q-chip
                   dense
@@ -603,8 +603,8 @@ const stats = computed(() => {
         :class="['offer-card', `offer-card--${item.status}`]"
       >
         <q-card-section class="q-pb-sm">
-          <div class="row items-start justify-between no-wrap q-gutter-sm">
-            <div class="col">
+          <div class="row items-start justify-between q-gutter-sm linha-consulta">
+            <div class="col linha-consulta__info">
               <div class="row items-center q-gutter-xs q-mb-xs">
                 <q-chip
                   dense
@@ -1094,7 +1094,14 @@ const stats = computed(() => {
   }
 }
 
+.linha-consulta {
+  flex-wrap: wrap;
+}
+.linha-consulta__info {
+  min-width: min(220px, 100%);
+}
 .tempo-espera {
+  flex: 0 1 340px;
   max-width: 340px;
   padding: 8px 12px;
   border-radius: 10px;
@@ -1104,6 +1111,13 @@ const stats = computed(() => {
   &--longa {
     background: rgba(239, 68, 68, 0.12);
     color: #b91c1c;
+  }
+  // Celular: o aviso de espera vai para baixo das informações, em largura total
+  @media (max-width: 599px) {
+    flex: 1 1 100%;
+    max-width: 100%;
+    align-items: flex-start;
+    text-align: left;
   }
 
   &__envio {

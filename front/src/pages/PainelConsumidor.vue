@@ -1064,7 +1064,7 @@ const clientWaterSavedLitres = computed(() => {
 }
 @media (min-width: 1024px) {
   .perfil-pagina { padding: 16px 24px; }
-  .perfil-grid { grid-template-columns: minmax(300px, 1fr) minmax(0, 2fr); gap: 16px; }
+  .perfil-grid { grid-template-columns: minmax(min(300px, 100%), 1fr) minmax(0, 2fr); gap: 16px; }
 }
 .preset-avatar {
   border: 1px solid rgba(128, 128, 128, 0.4);
@@ -1095,5 +1095,19 @@ const clientWaterSavedLitres = computed(() => {
 .report-scroll {
   max-height: 75vh;
   overflow-y: auto;
+}
+
+// Selo "3 em Cidade" dos cartões de explorar: não passa da largura do cartão
+.explore-card__chip {
+  max-width: calc(100% - 40px);
+  min-width: 0;
+  flex-shrink: 1;
+  margin-right: 0;
+  :deep(.q-chip__content) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 </style>

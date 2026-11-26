@@ -1201,13 +1201,13 @@ const lojaDesvinculada = computed(() => !!(usuarioAtual.value?.suspenso || usuar
 }
 .inicio-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
 @media (min-width: 1000px) {
   .inicio-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
 .header-user-btn { max-width: 200px; font-weight: 600; }

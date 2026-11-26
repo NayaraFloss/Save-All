@@ -416,7 +416,7 @@ const excluir = (item) => {
   gap: 8px;
   align-items: start;
   align-content: start;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
 }
 @media (max-width: 400px) {
   .itens-grade {
