@@ -1,9 +1,13 @@
 <script setup>
+// Resume o fluxo de pedidos da loja e permite avançar seu acompanhamento.
 import { ref, computed } from "vue";
 import { useAppStore } from "../../stores/estadoApp";
 import { abrirWhatsapp, mensagemStatusPedido, normalizarTelefone } from "../../utils/whatsapp";
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({ modoEscuro: Boolean, storeOrders: { type: Array, default: () => [] }, orders: { type: Array, default: () => [] }, lojaId: String });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["status-updated", "refresh-orders", "update-status"]);
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const orderPipelineTab = ref("pending");
 // Entregues: mostra só os pedidos entregues hoje (o histórico completo fica no Relatório).
 const ehHoje = (iso) => {
@@ -19,6 +23,7 @@ const pedidosDaFase = (status) =>
       (status !== "delivered" || ehHoje(o.entregueEm || o.date)) &&
       (status !== "cancelled" || ehHoje(o.canceladoEm || o.date)),
   );
+// Valores derivados das entradas e do estado para manter a apresentação sincronizada.
 const filteredOrders = computed(() => pedidosDaFase(orderPipelineTab.value));
 const getCount = (status) => pedidosDaFase(status).length;
 // Botão do WhatsApp em cada pedido: abre a mensagem pronta da situação atual
@@ -31,6 +36,7 @@ const enviarWhatsapp = (order) => {
 </script>
 
 <template>
+<!-- Interface principal: resume o fluxo de pedidos da loja e permite avançar seu acompanhamento. -->
   <div class="column q-gutter-y-md">
     <!-- Header info -->
     <q-card flat bordered>

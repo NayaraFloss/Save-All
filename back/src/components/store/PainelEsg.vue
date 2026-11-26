@@ -1,9 +1,11 @@
 <script setup>
+// Apresenta o painel de sustentabilidade e coordena a consulta dos dados ESG da loja.
 import { ref, computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useAppStore } from "stores/estadoApp";
 import { jsPDF } from "jspdf";
 import { desenharCarimboDigital, detalhesAssinaturaDigital } from "../../utils/assinaturaDigital";
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({
   lojaId: String,
   nomeLoja: String,
@@ -14,8 +16,10 @@ const props = defineProps({
   parte: { type: String, default: "tudo" }
 });
 const { orders, foods } = storeToRefs(useAppStore());
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const activeReportSubTab = ref(props.parte === "certificados" ? "donations" : props.activeReportSubTabSetting || "summary");
 const selectedLogDetails = ref(null);
+// Valores derivados das entradas e do estado para manter a apresentação sincronizada.
 const logDetailsOpen = computed({
   get: () => !!selectedLogDetails.value,
   set: (v) => {
@@ -96,6 +100,7 @@ const co2Prevented = computed(() => {
 const waterSafeguarded = computed(() => {
   return Math.round(totalWeightSaved.value * 130);
 });
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const handleDownloadPdfCertificate = (log) => {
   if (!log) return;
   const isDonation = log.type === "donation";
@@ -474,6 +479,7 @@ const handleGenerateConsolidatedReport = () => {
 </script>
 
 <template>
+<!-- Interface principal: apresenta o painel de sustentabilidade e coordena a consulta dos dados ESG da loja. -->
   <div class="column q-gutter-y-md text-left">
     <!-- RELATÓRIO MENSAL INTEGRADO DE SUSTENTABILIDADE CONTAINER -->
     <q-card flat :bordered="parte === 'tudo'">

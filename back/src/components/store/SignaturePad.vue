@@ -1,12 +1,17 @@
 <script setup>
+// Oferece a área de desenho e confirmação de assinatura usada nos fluxos da loja.
 import { ref, onMounted, watch } from "vue";
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({ modelValue: String, label: String, darkMode: Boolean, initialImage: String });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["update:modelValue"]);
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const canvasRef = ref(null);
 const isDrawing = ref(false);
 const hasDrawn = ref(false);
 const showExisting = ref(!!props.initialImage);
 let ctx = null;
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const initCanvas = () => {
   if (!canvasRef.value) return;
   const canvas = canvasRef.value;
@@ -26,6 +31,7 @@ onMounted(() => {
     setTimeout(initCanvas, 150);
   }
 });
+// Observa mudanças relevantes e sincroniza o estado local com os dados recebidos.
 watch(() => props.initialImage, (newVal) => {
   showExisting.value = !!newVal;
   if (!newVal) {
@@ -94,6 +100,7 @@ const handleRedraw = () => {
 </script>
 
 <template>
+<!-- Interface principal: oferece a área de desenho e confirmação de assinatura usada nos fluxos da loja. -->
   <div class="column q-gutter-y-xs">
     <div v-if="label" class="text-caption text-uppercase text-weight-bold text-grey-7 pad-label">
       {{ label }}

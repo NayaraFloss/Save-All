@@ -1,12 +1,15 @@
 <script setup>
+// Exibe alertas de validade e permite encaminhar itens vencidos para doação ou descarte.
 import { computed } from "vue";
 import { ordenarPorUrgenciaDeVencimento, calcularPrecificacaoDinamica } from "../../utils/precificacaoDinamica";
 
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({
   foods: { type: Array, default: () => [] },
   lojaId: { type: String, default: "" },
   modoEscuro: Boolean
 });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["edit-item", "destinar-item"]);
 
 // Itens ativos da loja, do mais perto de vencer para o mais longe.
@@ -29,6 +32,7 @@ const emAlerta = computed(() => itens.value.filter((i) => i.calc.faixaIndex >= 1
 const semAlerta = computed(() => itens.value.length - emAlerta.value.length);
 const lista = computed(() => emAlerta.value.slice(0, 5));
 
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const dinheiro = (v) => Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const cor = (faixa) => (faixa >= 3 ? "negative" : faixa === 2 ? "warning" : "amber-8");
 const prazo = (calc) => {
@@ -40,6 +44,7 @@ const prazo = (calc) => {
 </script>
 
 <template>
+<!-- Interface principal: exibe alertas de validade e permite encaminhar itens vencidos para doação ou descarte. -->
   <q-card flat bordered :dark="modoEscuro">
     <q-card-section class="q-pb-sm">
       <div class="row items-center justify-between no-wrap">

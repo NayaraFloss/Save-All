@@ -1,16 +1,21 @@
 <script setup>
+// Exibe o resumo inicial da loja com os dados necessários para orientar suas próximas ações.
 import { ref, computed } from "vue";
 import { resumoLoja } from "../../utils/resumoLoja";
 
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({
   orders: { type: Array, default: () => [] },
   disposals: { type: Array, default: () => [] },
   modoEscuro: Boolean
 });
 
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const periodo = ref(7);
+// Valores derivados das entradas e do estado para manter a apresentação sincronizada.
 const resumo = computed(() => resumoLoja({ orders: props.orders, disposals: props.disposals, dias: periodo.value }));
 
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const dinheiro = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const quilos = (v) => `${v.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} kg`;
 const unidades = (v) => `${v} un`;
@@ -34,6 +39,7 @@ const altura = (valor, serie) => {
 </script>
 
 <template>
+<!-- Interface principal: exibe o resumo inicial da loja com os dados necessários para orientar suas próximas ações. -->
   <q-card flat bordered :dark="modoEscuro" class="resumo-card">
     <q-card-section class="q-pb-sm">
       <div class="row items-center justify-between no-wrap">

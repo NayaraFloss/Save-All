@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import { useRoute } from "vue-router";
 import { storeToRefs } from "pinia";
 import { armazem } from "../services/armazemServidor";
@@ -29,6 +29,12 @@ const agora = ref(Date.now());
 let relogio = null;
 
 const notaBaixa = computed(() => nota.value < 3);
+// Escolha das estrelas: 1 estrela marca a reclamação sozinha; 3 estrelas ou mais desmarcam
+// (reclamação formal só vale para nota 1 ou 2, como no card de Governança da loja).
+watch(nota, (n) => {
+  if (n === 1) reclamacao.value = true;
+  else if (n >= 3) reclamacao.value = false;
+});
 const entregue = computed(() => oferta.value?.status === "completed");
 const prazoAberto = computed(() => {
   agora.value; // reavalia a cada minuto
@@ -69,7 +75,7 @@ const carregar = async () => {
     if (anterior) {
       nota.value = anterior.notaComida || 5;
       comentario.value = anterior.comentarioComida || "";
-      reclamacao.value = !!anterior.reclamacaoComida;
+      reclamacao.value = nota.value <= 2 && (!!anterior.reclamacaoComida || nota.value === 1);
     }
     avaliadoPor.value = anterior?.avaliadoPor || encontrada.confirmedBy || "";
   }
@@ -85,7 +91,7 @@ const enviar = async () => {
     const atualizada = await armazem.avaliarOfertaPublica(oferta.value.token || oferta.value.id, {
       notaComida: nota.value,
       comentarioComida: comentario.value.trim(),
-      reclamacaoComida: reclamacao.value || nota.value === 1,
+      reclamacaoComida: nota.value === 1 || (reclamacao.value && nota.value <= 2),
       avaliadoPor: avaliadoPor.value.trim(),
     });
     oferta.value = atualizada;
@@ -233,9 +239,12 @@ onBeforeUnmount(() => clearInterval(relogio));
                 dense
                 color="negative"
                 class="q-mt-sm"
-                :disable="!podeResponder || nota === 1"
+                :disable="!podeResponder || nota === 1 || nota >= 3"
                 label="Registrar como reclamação formal sobre os alimentos"
               />
+              <div v-if="nota >= 3" class="text-caption text-grey-6 q-mt-xs">
+                Reclamação formal só pode ser registrada com nota 1 ou 2.
+              </div>
               <div v-if="nota === 1" class="text-caption text-negative q-mt-xs">
                 Nota de 1 estrela gera reclamação automaticamente.
               </div>

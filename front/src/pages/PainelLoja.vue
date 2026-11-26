@@ -23,6 +23,7 @@ import { resumoEstoque, prepararParaDestinar } from "../utils/lotesVencidos";
 import MenuLoja from "../components/store/MenuLoja.vue";
 import ContadoresLoja from "../components/store/ContadoresLoja.vue";
 import AvaliacoesRecebidas from "../components/store/AvaliacoesRecebidas.vue";
+import { listarAvaliacoes, resumirAvaliacoes, LIMITE_RECLAMACOES } from "../utils/resumoAvaliacoes";
 import AlertasVencimentoLoja from "../components/store/AlertasVencimentoLoja.vue";
 import { servicoDoacoes } from "../services/servicoDoacoes";
 import { CERTIFICADO_EXEMPLO } from "../utils/assinaturaDigital";
@@ -466,9 +467,24 @@ watch(
   { immediate: true },
 );
 onUnmounted(pararSincronizacaoAvaliacoes);
-const totalAvaliacoes = computed(
-  () => storeOrders.value.filter((o) => o.notaComida).length + ofertasAvaliadas.value.length,
-);
+// Governança de Qualidade: mesma conta da lista "Avaliações recebidas" (pedidos + doações).
+// O servidor guarda qtdReclamacoes no usuário; usamos o maior valor entre o servidor e a
+// conta local para o card nunca mostrar "0 / 5" quando a lista já tem reclamações.
+const qualidade = computed(() => {
+  const r = resumirAvaliacoes(listarAvaliacoes(storeOrders.value, ofertasAvaliadas.value));
+  const doServidor = Number(usuarioAtual.value?.qtdReclamacoes ?? usuarioAtual.value?.complaintsCount) || 0;
+  const reclamacoes = r.total ? r.reclamacoes : doServidor;
+  const notaServidor = Number(usuarioAtual.value?.rating) || 0;
+  return {
+    total: r.total || Number(usuarioAtual.value?.qtdAvaliacoes) || 0,
+    media: r.total ? r.media : notaServidor,
+    reclamacoes,
+    percentualLimite: Math.min(100, Math.round((reclamacoes / LIMITE_RECLAMACOES) * 100)),
+    excedido: reclamacoes > LIMITE_RECLAMACOES,
+  };
+});
+const totalAvaliacoes = computed(() => qualidade.value.total);
+const lojaDesvinculada = computed(() => !!(usuarioAtual.value?.suspenso || usuarioAtual.value?.isSuspended) || qualidade.value.excedido);
 </script>
 
 <template>
@@ -508,7 +524,7 @@ const totalAvaliacoes = computed(
 
         <!-- WARNING BANNER IF SUSPENDED OR COMPLAINTS EXCEEDED -->
         <q-banner
-          v-if="usuarioAtual?.isSuspended || (usuarioAtual?.complaintsCount && usuarioAtual.complaintsCount > 5)"
+          v-if="lojaDesvinculada"
           rounded
           class="bg-negative text-white q-mb-md"
         >
@@ -519,7 +535,7 @@ const totalAvaliacoes = computed(
             ESTABELECIMENTO DESVINCULADO
           </div>
           <div class="text-caption q-mt-xs">
-            Seu estabelecimento acumulou <strong>{{ usuarioAtual?.complaintsCount || 6 }} reclamações de 1 estrela</strong> (limite máximo: 5).
+            Seu estabelecimento acumulou <strong>{{ qualidade.reclamacoes }} reclamações de 1 estrela</strong> (limite máximo: {{ LIMITE_RECLAMACOES }}).
             Conforme a Lei nº 14.016/2020 e o regulamento de qualidade Save All, seu perfil foi desvinculado por segurança sanitária. Para contestar, fale com o administrador da plataforma.
           </div>
         </q-banner>
@@ -527,44 +543,44 @@ const totalAvaliacoes = computed(
         <!-- REPUTATION & QUALITY GOVERNANCE CARD (Rule 5) -->
         <q-card v-if="currentStoreView === 'quality'" flat bordered class="q-mb-md">
           <q-card-section class="q-gutter-y-sm">
-            <div class="row items-center justify-between">
-              <div class="row items-center q-gutter-x-sm">
+            <div class="row items-center justify-between q-gutter-y-xs" style="flex-wrap: wrap">
+              <div class="row items-center q-gutter-x-sm no-wrap" style="min-width: 0">
                 <q-icon name="shield" color="warning" size="18px" />
                 <div class="text-subtitle2 text-weight-bold text-uppercase">Governança de Qualidade (Lei 14.016)</div>
               </div>
               <q-badge color="warning" text-color="dark" class="text-weight-bold">
-                Regra: Máx. 5 Reclamações
+                Regra: Máx. {{ LIMITE_RECLAMACOES }} Reclamações
               </q-badge>
             </div>
 
             <div class="row q-col-gutter-sm">
-              <div class="col-6">
+              <div class="col-12 col-sm-6">
                 <q-card flat bordered>
                   <q-card-section class="q-pa-sm">
                     <div class="text-caption text-uppercase text-grey-6 text-weight-bold">Média de Avaliação</div>
                     <div class="row items-center q-gutter-x-xs q-mt-xs">
                       <q-icon name="star" color="warning" size="18px" />
                       <span class="text-subtitle2 text-weight-bolder text-warning">
-                        {{ usuarioAtual?.rating?.toFixed(1) || '4.9' }} ★
+                        {{ qualidade.total ? qualidade.media.toFixed(1) : '—' }} ★
                       </span>
                       <span class="text-caption text-grey-6">
-                        ({{ totalAvaliacoes }} avaliações)
+                        ({{ totalAvaliacoes }} {{ totalAvaliacoes === 1 ? 'avaliação' : 'avaliações' }})
                       </span>
                     </div>
                   </q-card-section>
                 </q-card>
               </div>
 
-              <div class="col-6">
+              <div class="col-12 col-sm-6">
                 <q-card flat bordered>
                   <q-card-section class="q-pa-sm">
                     <div class="text-caption text-uppercase text-grey-6 text-weight-bold">Reclamações 1-Estrela</div>
                     <div class="row items-center q-gutter-x-xs q-mt-xs">
-                      <span :class="['text-subtitle2 text-weight-bolder', (usuarioAtual?.complaintsCount || 0) > 3 ? 'text-negative' : 'text-positive']">
-                        {{ usuarioAtual?.complaintsCount || 0 }} / 5
+                      <span :class="['text-subtitle2 text-weight-bolder', qualidade.reclamacoes > 3 ? 'text-negative' : (qualidade.reclamacoes > 0 ? 'text-warning' : 'text-positive')]">
+                        {{ qualidade.reclamacoes }} / {{ LIMITE_RECLAMACOES }}
                       </span>
                       <span class="text-caption text-grey-6">
-                        {{ (usuarioAtual?.complaintsCount || 0) > 5 ? 'EXCEDIDO' : 'Toleradas' }}
+                        {{ qualidade.excedido ? 'EXCEDIDO' : 'Toleradas' }}
                       </span>
                     </div>
                   </q-card-section>
@@ -574,16 +590,16 @@ const totalAvaliacoes = computed(
 
             <!-- Progress Bar towards disqualification -->
             <div>
-              <div class="row justify-between text-caption text-grey-6">
-                <span>Margem de Segurança de Qualidade</span>
-                <span>{{ Math.min(100, Math.round(((usuarioAtual?.complaintsCount || 0) / 5) * 100)) }}% do Limite</span>
+              <div class="row justify-between text-caption text-grey-6 no-wrap q-gutter-x-sm">
+                <span class="ellipsis">Margem de Segurança de Qualidade</span>
+                <span class="text-no-wrap">{{ qualidade.percentualLimite }}% do Limite</span>
               </div>
               <q-linear-progress
                 rounded
                 size="8px"
                 class="q-mt-xs"
-                :value="Math.min(100, Math.round(((usuarioAtual?.complaintsCount || 0) / 5) * 100)) / 100"
-                :color="(usuarioAtual?.complaintsCount || 0) > 5 ? 'negative' : ((usuarioAtual?.complaintsCount || 0) > 3 ? 'warning' : 'positive')"
+                :value="qualidade.percentualLimite / 100"
+                :color="qualidade.excedido ? 'negative' : (qualidade.reclamacoes > 3 ? 'warning' : 'positive')"
               />
             </div>
 
@@ -606,7 +622,7 @@ const totalAvaliacoes = computed(
 
           <!-- Ações rápidas -->
           <div class="row q-col-gutter-sm">
-            <div class="col-6">
+            <div class="col-12 col-sm-6">
               <q-btn
                 id="btn-store-add-food-quick"
                 class="full-width text-weight-bold"
@@ -618,7 +634,7 @@ const totalAvaliacoes = computed(
                 @click="handleTriggerAddItem"
               />
             </div>
-            <div class="col-6">
+            <div class="col-12 col-sm-6">
               <q-btn
                 class="full-width text-weight-bold"
                 outline

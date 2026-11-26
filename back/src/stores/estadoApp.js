@@ -1,3 +1,4 @@
+// Store central: mantém sessão, preferências, catálogo, sacola e pedidos, integrando serviços e navegação.
 import { ref, watch, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { Notify, Dark } from 'quasar'
@@ -150,6 +151,7 @@ export const useAppStore = defineStore('app', () => {
     const screen = HOME_SCREENS[role]
     if (screen) setScreen(screen)
   }
+  // Inicializa a sessão e carrega os dados necessários para abrir a aplicação.
   const initApp = async () => {
     loading.value = true
     try {
@@ -176,6 +178,7 @@ export const useAppStore = defineStore('app', () => {
       orders.value = []
     }
   })
+  // Autentica a pessoa, prepara seus dados e direciona para a área correspondente ao perfil.
   const login = async (email, pass) => {
     loading.value = true
     error.value = null
@@ -193,6 +196,7 @@ export const useAppStore = defineStore('app', () => {
       loading.value = false
     }
   }
+  // Registra a conta, carrega seus dados e abre a área inicial do perfil.
   const signup = async (name, email, pass, role, address, extraFields) => {
     loading.value = true
     error.value = null
@@ -210,6 +214,7 @@ export const useAppStore = defineStore('app', () => {
       loading.value = false
     }
   }
+  // Encerra a sessão e limpa os dados locais que não devem persistir entre contas.
   const logout = () => {
     authService.logout()
     armazem.limpar()
@@ -220,6 +225,7 @@ export const useAppStore = defineStore('app', () => {
     setScreen('welcome')
     triggerNotification('Sess\xE3o encerrada com sucesso.', 'success')
   }
+  // Atualiza o perfil no servidor e sincroniza o estado local conforme o resultado.
   const updateProfile = async (data) => {
     if (!usuarioAtual.value) return
     loading.value = true
@@ -247,6 +253,7 @@ export const useAppStore = defineStore('app', () => {
       loading.value = false
     }
   }
+  // Inclui o item na sacola, mantendo a associação ao estabelecimento e a quantidade.
   const addToCart = (item) => {
     if (cartStoreId.value && cartStoreId.value !== item.lojaId) {
       triggerNotification(
@@ -299,6 +306,7 @@ export const useAppStore = defineStore('app', () => {
   const getCartSubtotal = () => {
     return cart.value.reduce((acc, item) => acc + item.price * item.quantity, 0)
   }
+  // Consulta o catálogo de alimentos e atualiza o estado apresentado pelas telas.
   const loadFoods = async (lojaId, cat) => {
     loading.value = true
     try {
@@ -373,6 +381,7 @@ export const useAppStore = defineStore('app', () => {
     }
     return true
   }
+  // Consulta os pedidos do perfil atual e atualiza o acompanhamento na store.
   const loadOrders = async () => {
     if (!usuarioAtual.value) return
     loading.value = true
@@ -391,6 +400,7 @@ export const useAppStore = defineStore('app', () => {
       loading.value = false
     }
   }
+  // Valida a sacola, monta os valores do pedido e envia a criação ao serviço.
   const submitOrder = async (formaPagamento, pontosUsados, descontoPontos, deliveryFeeOverride) => {
     if (!usuarioAtual.value) throw new Error('\xC9 necess\xE1rio estar logado.')
     if (cart.value.length === 0) throw new Error('Sua sacola est\xE1 vazia.')
@@ -435,6 +445,7 @@ export const useAppStore = defineStore('app', () => {
       loading.value = false
     }
   }
+  // Persiste a mudança de situação do pedido e recarrega os dados atualizados.
   const updateOrderStatus = async (id, newStatus, extraFields) => {
     loading.value = true
     try {
@@ -451,6 +462,7 @@ export const useAppStore = defineStore('app', () => {
       loading.value = false
     }
   }
+  // Confere a elegibilidade e envia a avaliação do pedido.
   const submitOrderEvaluation = async (id, evaluation) => {
     const targetOrder = orders.value.find((o) => o.id === id)
     if (targetOrder && !canEvaluateOrder(targetOrder)) {

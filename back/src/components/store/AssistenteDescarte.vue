@@ -1,4 +1,5 @@
 <script setup>
+// Conduz as etapas de destinação dos alimentos, registra a operação e apresenta seu comprovante.
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { jsPDF } from "jspdf";
 import { storeToRefs } from "pinia";
@@ -6,6 +7,7 @@ import { servicoDoacoes } from "../../services/servicoDoacoes";
 import { armazem } from "../../services/armazemServidor";
 import { desenharCarimboDigital } from "../../utils/assinaturaDigital";
 import { useAppStore } from "../../stores/estadoApp";
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({
   show: Boolean,
   modoEscuro: Boolean,
@@ -18,6 +20,7 @@ const props = defineProps({
   // Consulta de doação (já entregue) que este certificado vai finalizar
   ofertaId: { type: String, default: "" }
 });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["close", "donation-created", "completed"]);
 const ngoCnpjPresets = {
   "Mesa Brasil Sesc": "12.345.678/0001-90",
@@ -25,6 +28,7 @@ const ngoCnpjPresets = {
   "Par\xF3quia Integrar Verde": "78.901.234/0003-56",
   "ONG Sop\xE3o Solid\xE1rio": "89.012.345/0004-78"
 };
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const currentStep = ref(props.initialStep);
 const selectedType = ref(props.initialType);
 const recipientOrg = ref("Mesa Brasil Sesc");
@@ -71,6 +75,7 @@ const getStoreCity = () => {
 };
 const registeredSocialPartners = ref(servicoDoacoes.getSocialPartnersByProximity(getStoreCity()));
 const registeredDisposalPartners = ref(servicoDoacoes.getDisposalPartners());
+// Valores derivados das entradas e do estado para manter a apresentação sincronizada.
 const currentSelectedSocialPartner = computed(() => {
   return registeredSocialPartners.value.find((p) => p.name === recipientOrg.value) || registeredSocialPartners.value[0];
 });
@@ -113,6 +118,7 @@ onMounted(() => {
   initializeFormFields();
   signatureName.value = usuarioAtual.value?.name || "";
 });
+// Observa mudanças relevantes e sincroniza o estado local com os dados recebidos.
 watch(recipientOrg, (newOrg) => {
   recipientCnpj.value = ngoCnpjPresets[newOrg] || "";
 });
@@ -666,6 +672,7 @@ const disposalPartnerOptions = computed(() =>
 </script>
 
 <template>
+<!-- Interface principal: conduz as etapas de destinação dos alimentos, registra a operação e apresenta seu comprovante. -->
   <q-dialog v-model="dialogOpen">
     <q-card class="wizard-card column no-wrap" :dark="modoEscuro">
       <!-- Cabeçalho -->

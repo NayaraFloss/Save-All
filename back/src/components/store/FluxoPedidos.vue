@@ -1,17 +1,24 @@
 <script setup>
+// Resume o fluxo de pedidos da loja e permite avançar seu acompanhamento.
 import { ref, computed } from "vue";
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({ modoEscuro: Boolean, storeOrders: { type: Array, default: () => [] }, orders: { type: Array, default: () => [] }, lojaId: String });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["status-updated", "refresh-orders", "update-status"]);
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const orderPipelineTab = ref("pending");
+// Valores derivados das entradas e do estado para manter a apresentação sincronizada.
 const filteredOrders = computed(() => {
   return props.storeOrders.filter((o) => o.status === orderPipelineTab.value);
 });
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const getCount = (status) => {
   return props.storeOrders.filter((o) => o.status === status).length;
 };
 </script>
 
 <template>
+<!-- Interface principal: resume o fluxo de pedidos da loja e permite avançar seu acompanhamento. -->
   <div class="column q-gutter-y-md">
     <!-- Header info -->
     <q-card flat bordered>

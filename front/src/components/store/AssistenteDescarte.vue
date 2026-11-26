@@ -1,4 +1,5 @@
 <script setup>
+// Conduz as etapas de destinação dos alimentos, registra a operação e apresenta seu comprovante.
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { jsPDF } from "jspdf";
 import { storeToRefs } from "pinia";
@@ -6,6 +7,7 @@ import { servicoDoacoes } from "../../services/servicoDoacoes";
 import { armazem } from "../../services/armazemServidor";
 import { desenharCarimboDigital } from "../../utils/assinaturaDigital";
 import { useAppStore } from "../../stores/estadoApp";
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({
   show: Boolean,
   modoEscuro: Boolean,
@@ -19,6 +21,7 @@ const props = defineProps({
   // Consulta de doação (já entregue) que este certificado vai finalizar
   ofertaId: { type: String, default: "" }
 });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["close", "donation-created", "completed"]);
 const ngoCnpjPresets = {
   "Mesa Brasil Sesc": "12.345.678/0001-90",
@@ -26,6 +29,7 @@ const ngoCnpjPresets = {
   "Par\xF3quia Integrar Verde": "78.901.234/0003-56",
   "ONG Sop\xE3o Solid\xE1rio": "89.012.345/0004-78"
 };
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const currentStep = ref(props.initialStep);
 const selectedType = ref(props.initialType);
 const recipientOrg = ref("Mesa Brasil Sesc");
@@ -184,6 +188,7 @@ onMounted(() => {
   initializeFormFields();
   signatureName.value = usuarioAtual.value?.name || "";
 });
+// Observa mudanças relevantes e sincroniza o estado local com os dados recebidos.
 watch(recipientOrg, (newOrg) => {
   recipientCnpj.value = ngoCnpjPresets[newOrg] || "";
 });
@@ -317,17 +322,55 @@ const aplicarDadosDaOferta = (oferta) => {
   if (oferta.confirmedBy) recipientRepresentativeName.value = oferta.confirmedBy;
   if (oferta.signatureCpf) recipientRepresentativeCpf.value = oferta.signatureCpf;
 };
+// --- Disponibilidade das entidades -------------------------------------------------
+// "Não podemos hoje" vale só para a entidade que respondeu e só no dia da resposta.
+// No dia seguinte ela volta a aparecer como disponível; as outras entidades nunca são afetadas.
+const ofertasAtuais = ref([]);
+const mesmoDia = (valor) => {
+  if (!valor) return false;
+  const d = new Date(valor);
+  if (isNaN(d)) return false;
+  const hoje = new Date();
+  return d.getFullYear() === hoje.getFullYear() && d.getMonth() === hoje.getMonth() && d.getDate() === hoje.getDate();
+};
+const dataDaResposta = (o) => o?.respondedAt || o?.updatedAt || o?.criadoEm || o?.createdAt;
+const recusaDeHoje = (o) => o?.status === "rejected" && mesmoDia(dataDaResposta(o));
+const mesmaEntidade = (o, nome) => String(o?.recipientOrg || "").trim().toLowerCase() === String(nome || "").trim().toLowerCase();
+// Recusa de hoje de uma entidade (a mais recente), ou null se ela está disponível
+const recusaHojeDa = (nome) =>
+  ofertasAtuais.value
+    .filter((o) => mesmaEntidade(o, nome) && recusaDeHoje(o))
+    .sort((a, b) => new Date(dataDaResposta(b) || 0) - new Date(dataDaResposta(a) || 0))[0] || null;
+const entidadeIndisponivelHoje = (nome) => !!recusaHojeDa(nome);
+
 const refreshActiveInquiry = () => {
   if (selectedType.value !== "donation") return;
-  const offers = servicoDoacoes.getDonationOffers();
+  const offers = servicoDoacoes.getDonationOffers() || [];
+  ofertasAtuais.value = [...offers];
+  // Consulta vinculada (aberta pelo painel de consultas): vale enquanto a entidade escolhida for a dela
   const ofertaVinculada = props.ofertaId ? offers.find((o) => o.id === props.ofertaId) : null;
-  const matching = ofertaVinculada || offers.find(
-    (o) => o.status !== "cancelada" && o.status !== "completed" && (itensLote.value[0]?.id && o.foodId === itensLote.value[0].id || o.foodName === productName.value && o.recipientOrg === recipientOrg.value)
-  );
-  if (matching) {
-    activeInquiry.value = matching;
-    if (["accepted", "entregue"].includes(matching.status)) aplicarDadosDaOferta(matching);
+  if (ofertaVinculada && (!recipientOrg.value || mesmaEntidade(ofertaVinculada, recipientOrg.value))) {
+    activeInquiry.value = ofertaVinculada;
+    if (["accepted", "entregue"].includes(ofertaVinculada.status)) aplicarDadosDaOferta(ofertaVinculada);
+    return;
   }
+  const idLote = itensLote.value[0]?.id;
+  const doMesmoLote = (o) => (idLote && o.foodId === idLote) || (!!productName.value && o.foodName === productName.value);
+  // 1) Consulta em andamento (aguardando ou aceita) deste lote PARA A ENTIDADE ESCOLHIDA
+  const emAndamento = offers
+    .filter((o) => mesmaEntidade(o, recipientOrg.value) && doMesmoLote(o) && ["pending_inquiry", "accepted", "entregue"].includes(o.status))
+    .sort((a, b) => new Date(b.criadoEm || 0) - new Date(a.criadoEm || 0))[0];
+  // 2) Senão, se a entidade escolhida respondeu "não podemos hoje" HOJE, mostra a recusa
+  const matching = emAndamento || recusaHojeDa(recipientOrg.value) || null;
+  activeInquiry.value = matching;
+  if (matching && ["accepted", "entregue"].includes(matching.status)) aplicarDadosDaOferta(matching);
+};
+// Ao abrir: se a primeira entidade está indisponível hoje, já seleciona uma disponível
+const escolherEntidadeDisponivel = () => {
+  if (props.ofertaId || selectedType.value !== "donation") return;
+  if (!entidadeIndisponivelHoje(recipientOrg.value)) return;
+  const disponivel = registeredSocialPartners.value.find((p) => !entidadeIndisponivelHoje(p.name));
+  if (disponivel) recipientOrg.value = disponivel.name;
 };
 const handleSendInquiryViaAppAndWhatsapp = () => {
   const offer = servicoDoacoes.createDonationOffer({
@@ -358,8 +401,17 @@ const handleSendInquiryViaAppAndWhatsapp = () => {
     inquirySentSuccess.value = false;
   }, 4e3);
 };
-onMounted(() => {
+onMounted(async () => {
   refreshActiveInquiry();
+  escolherEntidadeDisponivel();
+  // Busca as respostas mais recentes das entidades (podem ter respondido em outro aparelho)
+  try {
+    await servicoDoacoes.atualizarDoServidor?.();
+  } catch {
+    // sem conexão: segue com o que já está carregado
+  }
+  refreshActiveInquiry();
+  escolherEntidadeDisponivel();
   window.addEventListener("saveall_donation_offer_updated", refreshActiveInquiry);
   window.addEventListener("saveall_donation_offer_created", refreshActiveInquiry);
 });
@@ -663,6 +715,11 @@ const handleCompleteWizard = () => {
     triggerNotification(`Não há entidade social validada em ${cidadeDaLoja || "sua cidade"} para receber a doação.`, "warning");
     return;
   }
+  // Entidade que respondeu "não podemos hoje" não recebe doação neste dia
+  if (selectedType.value === "donation" && !props.ofertaId && entidadeIndisponivelHoje(recipientOrg.value) && !["accepted", "entregue"].includes(activeInquiry.value?.status)) {
+    triggerNotification(`${recipientOrg.value} informou que não pode receber hoje. Escolha outra entidade ou o Descarte Ecológico.`, "warning");
+    return;
+  }
   // Doação com consulta em andamento só pode gerar o termo depois que a entidade aceitar
   const consultaVinculada = selectedType.value === "donation" ? activeInquiry.value : null;
   const consultaEmAndamento = consultaVinculada && (props.ofertaId || consultaVinculada.recipientOrg === recipientOrg.value) && ["pending_inquiry", "accepted", "entregue"].includes(consultaVinculada.status);
@@ -763,10 +820,19 @@ const dialogOpen = computed({
   }
 });
 const socialPartnerOptions = computed(() =>
-  registeredSocialPartners.value.map((org) => ({
-    value: org.name,
-    label: `${org.name} — ${org.city}/${org.state} ${org.calculatedProximity ? `(📍 ${org.calculatedProximity.distanceKm} km - ${org.calculatedProximity.label})` : ""}`
-  }))
+  registeredSocialPartners.value.map((org) => {
+    const indisponivel = entidadeIndisponivelHoje(org.name);
+    return {
+      value: org.name,
+      label: `${org.name} — ${org.city}/${org.state}`,
+      caption: indisponivel
+        ? "Indisponível hoje (respondeu que não pode receber)"
+        : org.calculatedProximity
+          ? `📍 ${org.calculatedProximity.distanceKm} km - ${org.calculatedProximity.label}`
+          : "Disponível",
+      indisponivel,
+    };
+  })
 );
 const disposalPartnerOptions = computed(() =>
   registeredDisposalPartners.value.map((par) => ({
@@ -777,6 +843,7 @@ const disposalPartnerOptions = computed(() =>
 </script>
 
 <template>
+<!-- Interface principal: conduz as etapas de destinação dos alimentos, registra a operação e apresenta seu comprovante. -->
   <q-dialog v-model="dialogOpen">
     <q-card class="wizard-card column no-wrap" :dark="modoEscuro">
       <!-- Cabeçalho -->
@@ -939,6 +1006,7 @@ const disposalPartnerOptions = computed(() =>
                   v-model="recipientOrg"
                   class="partner-select"
                   popup-content-class="partner-select-menu"
+                  behavior="menu"
                   :disable="ofertaTravada"
                   :options="socialPartnerOptions"
                   emit-value
@@ -947,7 +1015,19 @@ const disposalPartnerOptions = computed(() =>
                   dense
                   :dark="modoEscuro"
                   options-dense
-                />
+                >
+                  <template #option="scope">
+                    <q-item v-bind="scope.itemProps" :dark="modoEscuro">
+                      <q-item-section>
+                        <q-item-label :class="{ 'text-grey-6': scope.opt.indisponivel }">{{ scope.opt.label }}</q-item-label>
+                        <q-item-label caption :class="scope.opt.indisponivel ? 'text-negative' : 'text-positive'">{{ scope.opt.caption }}</q-item-label>
+                      </q-item-section>
+                      <q-item-section side>
+                        <q-icon :name="scope.opt.indisponivel ? 'event_busy' : 'check_circle'" :color="scope.opt.indisponivel ? 'negative' : 'positive'" size="18px" />
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
 
                 <q-card v-if="currentSelectedSocialPartner" flat bordered :dark="modoEscuro">
                   <q-card-section class="q-pa-sm column q-gutter-y-xs">
@@ -978,7 +1058,7 @@ const disposalPartnerOptions = computed(() =>
                     </span>
 
                     <q-chip v-if="activeInquiry?.status === 'accepted'" dense square color="positive" text-color="white" icon="check" class="text-weight-bold text-uppercase">Disponibilidade Aceita</q-chip>
-                    <q-chip v-else-if="activeInquiry?.status === 'rejected'" dense square color="negative" text-color="white" icon="cancel" class="text-weight-bold text-uppercase">Indisponível</q-chip>
+                    <q-chip v-else-if="activeInquiry?.status === 'rejected'" dense square color="negative" text-color="white" icon="cancel" class="text-weight-bold text-uppercase">Indisponível hoje</q-chip>
                     <q-chip v-else-if="activeInquiry?.status === 'pending_inquiry'" dense square color="warning" text-color="dark" icon="schedule" class="text-weight-bold text-uppercase">Aguardando Resposta</q-chip>
                     <span v-else class="text-caption text-weight-bold text-grey-6">Aceite ainda não solicitado</span>
                   </div>
@@ -1023,7 +1103,8 @@ const disposalPartnerOptions = computed(() =>
                   </q-banner>
 
                   <q-banner v-else-if="activeInquiry?.status === 'rejected'" dense rounded class="tint-negative text-caption">
-                    <div class="text-negative text-weight-bold">✕ Entidade informou não ter disponibilidade hoje.</div>
+                    <div class="text-negative text-weight-bold">✕ {{ activeInquiry.recipientOrg || 'A entidade' }} informou não ter disponibilidade hoje.</div>
+                    <div class="text-grey-6">Vale só para hoje: amanhã esta entidade volta a ficar disponível.</div>
                     <div v-if="activeInquiry.rejectionReason" class="text-grey-6">Motivo: {{ activeInquiry.rejectionReason }}</div>
                     <div class="text-warning">💡 Sugestão: Selecione outra entidade no campo acima ou opte pelo Descarte Ecológico.</div>
                   </q-banner>
@@ -1046,6 +1127,7 @@ const disposalPartnerOptions = computed(() =>
                   v-model="discardDestination"
                   class="partner-select"
                   popup-content-class="partner-select-menu"
+                  behavior="menu"
                   :options="disposalPartnerOptions"
                   emit-value
                   map-options

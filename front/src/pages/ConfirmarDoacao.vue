@@ -1,5 +1,4 @@
 <script setup>
-import { cpfValido } from "../utils/formatadores";
 import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { servicoDoacoes } from "../services/servicoDoacoes";
@@ -20,7 +19,10 @@ const responseChoice = ref("accept");
 const confirmedByName = ref("");
 const recipientCpf = ref("");
 const pickupTime = ref("");
+// Observações de transporte (quando aceita) e mensagem adicional (quando recusa) são campos
+// separados na tela, mas os dois vão para o mesmo campo "responseNote" da doação.
 const responseNotes = ref("");
+const transportNotes = ref("");
 const rejectionReason = ref("Capacidade m\xE1xima de armazenamento atingida hoje");
 const legalConsentAccepted = ref(true);
 const signatureImage = ref("");
@@ -64,7 +66,8 @@ const loadOffer = async () => {
     confirmedByName.value = found.confirmedBy || (found.recipientOrg ? `Respons\xE1vel (${found.recipientOrg})` : "");
     recipientCpf.value = found.signatureCpf || "";
     pickupTime.value = found.pickupEstimatedTime || "17:00";
-    responseNotes.value = found.responseNote || "";
+    responseNotes.value = found.status === "rejected" ? found.responseNote || "" : "";
+    transportNotes.value = found.status !== "rejected" ? found.responseNote || "" : "";
     if (found.signatureImage) {
       signatureImage.value = found.signatureImage;
       hasSignature.value = true;
@@ -100,8 +103,9 @@ const handleSubmitResponse = async (status) => {
       triggerNotification("Desenhe sua assinatura no quadro e toque em \"Confirmar Assinatura\" antes de aceitar a doa\xE7\xE3o.", "warning");
       return;
     }
-    if (!cpfValido(recipientCpf.value)) {
-      triggerNotification("Informe um CPF válido do responsável (11 números, ex.: 123.456.789-09).", "error");
+    // CPF: só precisa estar preenchido (não verificamos se os números são de um CPF válido)
+    if (!recipientCpf.value.trim()) {
+      triggerNotification("Informe o CPF do responsável.", "error");
       return;
     }
     if (!legalConsentAccepted.value) {
@@ -115,7 +119,7 @@ const handleSubmitResponse = async (status) => {
       status,
       confirmedBy: confirmedByName.value.trim() || void 0,
       pickupEstimatedTime: pickupTime.value || void 0,
-      responseNote: responseNotes.value.trim() || void 0,
+      responseNote: (status === "accepted" ? transportNotes.value : responseNotes.value).trim() || void 0,
       rejectionReason: status === "rejected" ? rejectionReason.value : void 0,
       signatureImage: status === "accepted" ? signatureImage.value || void 0 : void 0,
       signatureCpf: status === "accepted" ? recipientCpf.value.trim() || void 0 : void 0
@@ -139,8 +143,8 @@ const handleSubmitResponse = async (status) => {
   <q-page :class="['confirmar-page column justify-between', { 'bg-dark text-white': modoEscuro, 'bg-grey-2': !modoEscuro }]">
     <!-- Barra superior -->
     <q-toolbar :class="['top-bar', modoEscuro ? 'bg-dark' : 'bg-white']">
-      <div class="page-container row items-center justify-between full-width q-px-md">
-        <div class="row items-center no-wrap q-gutter-x-sm">
+      <div class="page-container row items-center justify-between no-wrap full-width q-px-sm top-bar-inner">
+        <div class="row items-center no-wrap q-gutter-x-sm top-bar-title">
           <q-avatar square size="36px" class="logo-box bg-green-1 text-positive">
             <q-icon name="favorite" size="20px" />
           </q-avatar>
@@ -149,13 +153,13 @@ const handleSubmitResponse = async (status) => {
               <span>Save All</span>
               <q-badge color="positive" class="text-weight-bold text-uppercase mono">Portal Seguro</q-badge>
             </div>
-            <div class="text-caption text-grey-6">
+            <div class="text-caption text-grey-6 gt-xs">
               Confirmação de Doação &amp; Assinatura Digital (Lei 14.016/2020)
             </div>
           </div>
         </div>
 
-        <div class="row items-center q-gutter-x-sm">
+        <div class="row items-center no-wrap q-gutter-x-sm">
           <q-btn
             flat
             round
@@ -212,8 +216,8 @@ const handleSubmitResponse = async (status) => {
         <!-- Cartão de status -->
         <q-card flat bordered :dark="modoEscuro" :class="statusCardClass()">
           <q-card-section>
-            <div class="row items-start justify-between no-wrap q-gutter-x-sm">
-              <div class="col">
+            <div class="row items-start justify-between q-gutter-x-sm status-head">
+              <div class="col status-main">
                 <q-badge
                   rounded
                   class="text-weight-bold text-uppercase mono q-mb-sm q-pa-xs q-px-sm"
@@ -246,7 +250,7 @@ const handleSubmitResponse = async (status) => {
                 </div>
               </div>
 
-              <div class="text-right">
+              <div class="text-right status-code">
                 <div class="text-caption text-grey-6 mono">Código #{{ offer.id }}</div>
                 <div class="text-caption text-grey-6">{{ new Date(offer.criadoEm).toLocaleDateString('pt-BR') }}</div>
               </div>
@@ -264,7 +268,7 @@ const handleSubmitResponse = async (status) => {
                 </div>
 
                 <q-card v-if="offer.signatureImage" flat bordered :dark="modoEscuro" class="signature-card">
-                  <q-card-section class="row items-center justify-between no-wrap q-pa-sm">
+                  <q-card-section class="row items-center justify-between q-gutter-sm q-pa-sm">
                     <div>
                       <div class="text-caption text-grey-6 text-uppercase mono">Assinatura Digital Gravada:</div>
                       <img :src="offer.signatureImage" alt="Assinatura" class="signature-img q-mt-xs" :class="{ 'signature-invert': modoEscuro }" />
@@ -422,7 +426,7 @@ const handleSubmitResponse = async (status) => {
           <q-card-section v-else class="column q-gutter-y-md">
             <!-- Escolha -->
             <div class="row q-col-gutter-sm">
-              <div class="col-6">
+              <div class="col-12 col-sm-6">
                 <q-btn
                   type="button"
                   no-caps
@@ -440,7 +444,7 @@ const handleSubmitResponse = async (status) => {
                   </div>
                 </q-btn>
               </div>
-              <div class="col-6">
+              <div class="col-12 col-sm-6">
                 <q-btn
                   type="button"
                   no-caps
@@ -484,9 +488,7 @@ const handleSubmitResponse = async (status) => {
                     placeholder="000.000.000-00"
                     mask="###.###.###-##"
                     inputmode="numeric"
-                    :error="recipientCpf.replace(/\D/g, '').length === 11 && !cpfValido(recipientCpf)"
-                    error-message="CPF inválido: confira os números"
-                    hint="Somente números: o ponto e o traço entram sozinhos"
+                    hint="Somente números"
                   />
                 </div>
               </div>
@@ -505,8 +507,10 @@ const handleSubmitResponse = async (status) => {
                 </div>
                 <div class="col-12 col-sm-6">
                   <q-input
+                    v-model="transportNotes"
                     outlined
                     dense
+                    maxlength="1000"
                     :dark="modoEscuro"
                     label="Observações de Transporte"
                     placeholder="Ex: Carro com caixa térmica"
@@ -667,5 +671,41 @@ const handleSubmitResponse = async (status) => {
 }
 .consent-card {
   border-color: rgba(33, 186, 69, 0.4);
+}
+// Botões de escolha: texto quebra linha em vez de vazar
+.choice-btn :deep(.q-btn__content) {
+  flex-wrap: nowrap;
+  white-space: normal;
+  text-align: left;
+}
+.choice-btn :deep(.q-btn__content > div) {
+  min-width: 0;
+}
+.top-bar-title {
+  min-width: 0;
+}
+.status-main {
+  min-width: 0;
+}
+.q-badge {
+  white-space: normal;
+  height: auto;
+}
+:deep(.q-field__bottom) {
+  white-space: normal;
+}
+// Celular: cabeçalho compacto e código da doação embaixo do título
+@media (max-width: 599px) {
+  .status-head {
+    flex-direction: column;
+  }
+  .status-code {
+    text-align: left;
+    margin-left: 0;
+    margin-top: 8px;
+  }
+  .q-card__section {
+    padding: 12px;
+  }
 }
 </style>

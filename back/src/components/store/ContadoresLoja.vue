@@ -1,4 +1,5 @@
 <script setup>
+// Resume os principais totais da loja e encaminha a pessoa para os detalhes correspondentes.
 import { computed } from "vue";
 
 // Quatro contadores do início da loja. Cada cartão leva para a tela correspondente.
@@ -8,10 +9,12 @@ const props = defineProps({
   lojaId: { type: String, default: "" },
   modoEscuro: Boolean
 });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["abrir"]);
 
 const EM_ANDAMENTO = ["accepted", "preparing", "delivery"];
 
+// Valores derivados das entradas e do estado para manter a apresentação sincronizada.
 const cartoes = computed(() => [
   {
     chave: "novos", rotulo: "Novos pedidos", icone: "notifications_active", cor: "#fb8c00", fundo: "rgba(251,140,0,0.14)",
@@ -33,6 +36,7 @@ const cartoes = computed(() => [
 </script>
 
 <template>
+<!-- Interface principal: resume os principais totais da loja e encaminha a pessoa para os detalhes correspondentes. -->
   <div class="contadores">
     <q-card
       v-for="c in cartoes"

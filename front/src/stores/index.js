@@ -1,19 +1,18 @@
+// Inicializa o Pinia, que fornece a instância compartilhada das stores da aplicação.
 import { defineStore } from '#q-app/wrappers'
 import { createPinia } from 'pinia'
 
 /*
- * If not building with SSR mode, you can
- * directly export the Store instantiation;
- *
- * The function below can be async too; either use
- * async/await or return a Promise which resolves
- * with the Store instance.
+ * Sem SSR, a instância da store também pode ser exportada diretamente.
+ * Esta função de configuração pode ser assíncrona, desde que devolva a
+ * instância do Pinia ou uma promessa que a resolva.
  */
 
 export default defineStore((/* { ssrContext } */) => {
+  // Cria a instância que será registrada pelo boot do Quasar.
   const pinia = createPinia()
 
-  // You can add Pinia plugins here
+  // Registre plugins do Pinia neste ponto, antes de devolver a instância.
   // pinia.use(SomePiniaPlugin)
 
   return pinia

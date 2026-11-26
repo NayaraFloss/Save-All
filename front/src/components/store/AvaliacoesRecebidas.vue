@@ -1,6 +1,9 @@
 <script setup>
+// Reúne e resume as avaliações de pedidos e doações recebidas pela loja.
 import { computed, ref } from "vue";
+import { listarAvaliacoes, resumirAvaliacoes, ehReclamacao } from "../../utils/resumoAvaliacoes.js";
 
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({
   orders: { type: Array, default: () => [] },
   // Doações entregues já avaliadas pela entidade (campo avaliacaoEntidade)
@@ -8,43 +11,16 @@ const props = defineProps({
   modoEscuro: Boolean
 });
 
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const somenteReclamacoes = ref(false);
 
 // Avaliações dos clientes (pedidos) e das entidades (doações), da mais recente para a mais antiga.
-const dePedidos = computed(() =>
-  props.orders
-    .filter((o) => o.notaComida)
-    .map((o) => ({
-      id: `pedido-${o.id}`,
-      origem: "cliente",
-      notaComida: Number(o.notaComida),
-      comentarioComida: o.comentarioComida,
-      reclamacaoComida: !!o.reclamacaoComida,
-      data: o.avaliadoEm || o.date,
-    })),
-);
-const deDoacoes = computed(() =>
-  props.donations
-    .filter((d) => d?.avaliacaoEntidade?.notaComida)
-    .map((d) => ({
-      id: `doacao-${d.id || d.token}`,
-      origem: "entidade",
-      notaComida: Number(d.avaliacaoEntidade.notaComida),
-      comentarioComida: d.avaliacaoEntidade.comentarioComida,
-      reclamacaoComida: !!d.avaliacaoEntidade.reclamacaoComida,
-      data: d.avaliacaoEntidade.avaliadoEm || d.completedAt || d.createdAt,
-    })),
-);
-const avaliacoes = computed(() =>
-  [...dePedidos.value, ...deDoacoes.value].sort((a, b) => new Date(b.data || 0) - new Date(a.data || 0)),
-);
-const ehReclamacao = (o) => o.reclamacaoComida || o.notaComida === 1;
+// A conta é a mesma do card "Governança de Qualidade" (utils/resumoAvaliacoes.js).
+const avaliacoes = computed(() => listarAvaliacoes(props.orders, props.donations));
+const resumo = computed(() => resumirAvaliacoes(avaliacoes.value));
 const lista = computed(() => (somenteReclamacoes.value ? avaliacoes.value.filter(ehReclamacao) : avaliacoes.value));
-const media = computed(() => {
-  if (!avaliacoes.value.length) return 0;
-  return avaliacoes.value.reduce((s, o) => s + o.notaComida, 0) / avaliacoes.value.length;
-});
-const totalReclamacoes = computed(() => avaliacoes.value.filter(ehReclamacao).length);
+const media = computed(() => resumo.value.media);
+const totalReclamacoes = computed(() => resumo.value.reclamacoes);
 
 // Avaliações anônimas: só a data (sem hora), sem nome, sem número do pedido e sem itens comprados.
 const formatarData = (valor) => {
@@ -56,10 +32,11 @@ const corNota = (n) => (n >= 4 ? "positive" : n === 3 ? "warning" : "negative");
 </script>
 
 <template>
+<!-- Interface principal: reúne e resume as avaliações de pedidos e doações recebidas pela loja. -->
   <q-card flat bordered class="q-mb-md" :dark="modoEscuro">
     <q-card-section class="q-gutter-y-sm">
-      <div class="row items-center justify-between no-wrap">
-        <div class="row items-center q-gutter-x-sm no-wrap">
+      <div class="row items-center justify-between q-gutter-y-xs cabecalho-avaliacoes">
+        <div class="row items-center q-gutter-x-sm">
           <q-icon name="rate_review" color="primary" size="20px" />
           <div class="text-subtitle2 text-weight-bold text-uppercase">Avaliações recebidas</div>
           <q-badge outline color="grey-7" class="text-weight-bold">
@@ -93,7 +70,7 @@ const corNota = (n) => (n >= 4 ? "positive" : n === 3 ? "warning" : "negative");
             <q-avatar :color="o.origem === 'entidade' ? 'teal-5' : 'grey-5'" text-color="white" size="40px" :icon="o.origem === 'entidade' ? 'volunteer_activism' : 'person'" />
           </q-item-section>
           <q-item-section>
-            <div class="row items-center justify-between no-wrap">
+            <div class="row items-center justify-between q-gutter-x-sm linha-autor">
               <div class="text-subtitle2 text-weight-bold ellipsis">
                 {{ o.origem === "entidade" ? "Entidade parceira" : "Cliente anônimo" }}
               </div>
@@ -117,6 +94,12 @@ const corNota = (n) => (n >= 4 ? "positive" : n === 3 ? "warning" : "negative");
 <style scoped lang="scss">
 .opacity-40 {
   opacity: 0.4;
+}
+.cabecalho-avaliacoes {
+  flex-wrap: wrap;
+}
+.linha-autor {
+  flex-wrap: wrap;
 }
 .comentario {
   font-style: italic;

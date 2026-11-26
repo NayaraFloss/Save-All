@@ -1,8 +1,10 @@
 <script setup>
+// Apresenta os termos e informações que acompanham os relatórios da loja.
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { servicoDoacoes } from "../../services/servicoDoacoes";
 import { useAppStore } from "../../stores/estadoApp";
 
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({
   // Registros ESG da loja (doações e descartes já registrados)
   disposals: { type: Array, default: () => [] },
@@ -10,8 +12,10 @@ const props = defineProps({
 });
 const { triggerNotification } = useAppStore();
 
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const aba = ref("doacao");
 const ofertas = ref([]);
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const carregar = () => {
   try {
     ofertas.value = servicoDoacoes.getDonationOffers();
@@ -76,6 +80,7 @@ const baixarDescarte = (item) => {
 </script>
 
 <template>
+<!-- Interface principal: apresenta os termos e informações que acompanham os relatórios da loja. -->
   <div>
     <q-tabs v-model="aba" dense no-caps active-color="primary" indicator-color="primary" align="justify">
       <q-tab name="doacao" :label="`Termos de doação (${termosDoacao.length})`" />

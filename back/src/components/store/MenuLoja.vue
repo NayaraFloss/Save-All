@@ -1,4 +1,5 @@
 <script setup>
+// Apresenta as abas de navegação da loja e encaminha a seleção ou o encerramento da sessão.
 // Menu inferior do perfil Loja, no mesmo formato dos outros perfis
 // (cartão fixo embaixo com abas de ícone + rótulo). Os botões são só da loja.
 defineProps({
@@ -6,6 +7,7 @@ defineProps({
   pedidosPendentes: { type: Number, default: 0 },
   consultasPendentes: { type: Number, default: 0 }
 });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["update:modelValue", "logout"]);
 
 const abas = [
@@ -18,6 +20,7 @@ const abas = [
   { nome: "reports", icone: "description", rotulo: "Relatório" }
 ];
 
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const aoTrocar = (nome) => {
   if (nome === "logout") emit("logout");
   else emit("update:modelValue", nome);
@@ -25,6 +28,7 @@ const aoTrocar = (nome) => {
 </script>
 
 <template>
+<!-- Interface principal: apresenta as abas de navegação da loja e encaminha a seleção ou o encerramento da sessão. -->
   <q-card flat square class="footer-tabs">
     <q-separator />
     <q-tabs

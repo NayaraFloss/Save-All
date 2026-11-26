@@ -1,6 +1,9 @@
 <script setup>
+// Apresenta o catálogo da loja e encaminha ações de edição, retirada ou destinação de itens.
 import { computed } from "vue";
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({ modoEscuro: Boolean, foods: { type: Array, default: () => [] }, lojaId: String });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["edit-item", "add-item-click", "remove-item", "destinar-item"]);
 // Datas no formato dia/mês/ano (aceita "2026-06-05" ou data ISO completa).
 const dataBr = (valor) => {
@@ -19,12 +22,14 @@ const situacaoValidade = (valor) => {
   if (dias <= 2) return { texto: `Vence em ${dias} dia(s)`, cor: "warning" };
   return { texto: `Vence em ${dias} dias`, cor: "positive" };
 };
+// Valores derivados das entradas e do estado para manter a apresentação sincronizada.
 const myFoods = computed(() => {
   return props.foods.filter((f) => f.lojaId === props.lojaId);
 });
 </script>
 
 <template>
+<!-- Interface principal: apresenta o catálogo da loja e encaminha ações de edição, retirada ou destinação de itens. -->
   <div class="column q-gutter-y-md inventory-root">
     <!-- Header de Controle e Estatísticas -->
     <q-card flat bordered>

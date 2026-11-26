@@ -780,10 +780,10 @@ const clientWaterSavedLitres = computed(() => {
             </div>
 
             <div class="row q-col-gutter-sm">
-              <div class="col-6">
+              <div class="col-12 col-sm-6">
                 <q-btn id="btn-modal-cancel" outline no-caps color="grey-7" label="Cancelar" class="full-width text-weight-bold" @click="showProfileEdit = false" />
               </div>
-              <div class="col-6">
+              <div class="col-12 col-sm-6">
                 <q-btn
                   id="btn-modal-save-profile"
                   type="submit"
@@ -985,11 +985,11 @@ const clientWaterSavedLitres = computed(() => {
   &__arrow { transition: transform 0.2s ease; }
 }
 .city-list {
-  min-width: 260px;
+  min-width: min(260px, calc(100vw - 32px));
   max-height: 260px;
   overflow-y: auto;
 }
-.city-search { min-width: 260px; }
+.city-search { min-width: min(260px, calc(100vw - 32px)); }
 .eco-box {
   background: rgba(128, 128, 128, 0.06);
 }

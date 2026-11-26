@@ -191,7 +191,7 @@ const handleSelectStore = (lojaId) => {
   margin-right: auto;
 }
 .city-select {
-  min-width: 140px;
+  min-width: min(140px, 100%);
 }
 .store-card {
   transition: box-shadow 0.2s, border-color 0.2s;

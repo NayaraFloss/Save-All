@@ -543,7 +543,7 @@ const handleClear = () => {
     <!-- Ações -->
     <div class="page-footer q-px-md q-py-sm">
       <div class="footer-wrap q-mx-auto row q-col-gutter-sm">
-        <div class="col-6">
+        <div class="col-12 col-sm-6">
           <q-btn
             id="btn-add-item-remove"
             unelevated
@@ -555,7 +555,7 @@ const handleClear = () => {
             @click="handleClear"
           />
         </div>
-        <div class="col-6">
+        <div class="col-12 col-sm-6">
           <q-btn
             id="btn-add-item-save"
             unelevated

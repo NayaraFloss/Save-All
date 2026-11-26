@@ -1,13 +1,17 @@
 <script setup>
+// Edita a taxa padrão e as regras de frete por região, além de simular o cálculo para um endereço.
 import { ref, watch, computed } from "vue";
 import { DEFAULT_DELIVERY_FEE, formatCep, formatMoney, calculateDeliveryFee } from "src/utils/frete";
 
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
   config: { type: Object, default: () => ({}) }
 });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["update:modelValue", "save"]);
 
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const defaultFee = ref(String(DEFAULT_DELIVERY_FEE));
 const zones = ref([]);
 const newType = ref("bairro");
@@ -18,6 +22,7 @@ const formError = ref("");
 // Simulador: o lojista confere quanto o cliente pagaria
 const testInput = ref("");
 
+// Observa mudanças relevantes e sincroniza o estado local com os dados recebidos.
 watch(
   () => props.modelValue,
   (open) => {
@@ -34,6 +39,7 @@ watch(
   { immediate: true }
 );
 
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const normalizar = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
 const addZone = () => {
@@ -66,6 +72,7 @@ const removeZone = (id) => {
   zones.value = zones.value.filter((z) => z.id !== id);
 };
 
+// Valores derivados das entradas e do estado para manter a apresentação sincronizada.
 const cleanedConfig = computed(() => {
   const parsed = parseFloat(String(defaultFee.value).replace(",", "."));
   return {
@@ -89,6 +96,7 @@ const save = () => {
 </script>
 
 <template>
+<!-- Interface principal: edita a taxa padrão e as regras de frete por região, além de simular o cálculo para um endereço. -->
   <q-dialog :model-value="modelValue" @update:model-value="(v) => emit('update:modelValue', v)">
     <q-card class="frete-card">
       <q-card-section class="row items-center justify-between">

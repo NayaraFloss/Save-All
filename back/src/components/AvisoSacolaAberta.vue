@@ -5,6 +5,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAppStore } from 'stores/estadoApp'
 
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 defineProps({
   // Oculta o botão "Ir para a sacola" quando o aviso já está na própria tela da sacola
   ocultarIrParaSacola: { type: Boolean, default: false },
@@ -17,10 +18,13 @@ const appStore = useAppStore()
 const { cart } = storeToRefs(appStore)
 const { clearCart, getCartSubtotal, triggerNotification } = appStore
 
+// Valores derivados das entradas e do estado para manter a apresentação sincronizada.
 const itens = computed(() => cart.value.reduce((total, item) => total + item.quantity, 0))
 const total = computed(() => getCartSubtotal().toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }))
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const confirmando = ref(false)
 
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const irParaSacola = () => {
   if (route.name !== 'FinalizarPedido') router.push({ name: 'FinalizarPedido' })
 }
@@ -32,6 +36,7 @@ const excluir = () => {
 </script>
 
 <template>
+<!-- Interface principal: informa que já existe uma sacola ativa e permite retomá-la ou excluí-la antes de iniciar outro pedido. -->
   <div v-if="itens > 0">
     <q-banner id="aviso-sacola-aberta" rounded dense class="aviso-sacola text-body2" :class="{ 'aviso-sacola--compacto': compacto }">
       <template #avatar>

@@ -1,4 +1,5 @@
 <script setup>
+// Configura faixas de desconto por validade e permite avaliar seu impacto sobre o estoque.
 import { ref, reactive, computed } from "vue";
 import {
   CONFIG_PRECIFICACAO_PADRAO,
@@ -6,6 +7,7 @@ import {
   calcularPrecificacaoDinamica,
   formatarDataBR,
 } from "../../utils/precificacaoDinamica";
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({
   lojaId: String,
   modoEscuro: Boolean,
@@ -13,19 +15,23 @@ const props = defineProps({
   foods: { type: Array, default: () => [] },
   initialConfig: { type: Object, default: undefined }
 });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["saved", "save-config", "trigger-disposal", "notification"]);
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const descontoFaixa1 = ref(props.initialConfig?.descontoFaixa1 ?? CONFIG_PRECIFICACAO_PADRAO.descontoFaixa1);
 const descontoFaixa2 = ref(props.initialConfig?.descontoFaixa2 ?? CONFIG_PRECIFICACAO_PADRAO.descontoFaixa2);
 const descontoFaixa3 = ref(props.initialConfig?.descontoFaixa3 ?? CONFIG_PRECIFICACAO_PADRAO.descontoFaixa3);
 const descontoProdutoDia = ref(props.initialConfig?.descontoProdutoDia ?? CONFIG_PRECIFICACAO_PADRAO.descontoProdutoDia);
 // "Ver mais" de cada faixa (1, 2 e 3) abre/fecha a explicação de como ela funciona
 const faixasAbertas = reactive({ 1: false, 2: false, 3: false });
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const alternarFaixa = (numero) => {
   faixasAbertas[numero] = !faixasAbertas[numero];
 };
 const isSaved = ref(false);
 // Exemplo didático: produto de R$ 10,00 com o desconto escolhido no controle de cada faixa
 const exemploPreco = (percentual) => (10 * (1 - Number(percentual) / 100)).toFixed(2).replace(".", ",");
+// Valores derivados das entradas e do estado para manter a apresentação sincronizada.
 const explicacoesFaixas = computed(() => ({
   1: {
     finalidade: "Estimular a venda com desconto moderado enquanto ainda há tempo hábil para o escoamento do produto.",
@@ -171,6 +177,7 @@ const calculatedInventory = computed(() => {
 </script>
 
 <template>
+<!-- Interface principal: configura faixas de desconto por validade e permite avaliar seu impacto sobre o estoque. -->
   <div class="pricing-root column q-gutter-y-md">
     <!-- Cabeçalho: ocupa a largura toda (título à esquerda, controles à direita) -->
     <q-card flat bordered :dark="modoEscuro">
@@ -844,7 +851,7 @@ const calculatedInventory = computed(() => {
   .trecho { font-size: 10px; }
 }
 .save-btn {
-  min-width: 260px;
+  min-width: min(260px, 100%);
 }
 .food-thumb {
   border-radius: 12px;

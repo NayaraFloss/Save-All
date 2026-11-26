@@ -1,4 +1,5 @@
 <script setup>
+// Orquestra o fluxo de doação ou descarte, incluindo dados, confirmação e comprovante.
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { jsPDF } from "jspdf";
 import { storeToRefs } from "pinia";
@@ -7,6 +8,7 @@ import { formatCNPJ, formatCPF } from "../../utils/formatters";
 import { useAppStore } from "../../stores/estadoApp";
 import SignaturePad from "./SignaturePad.vue";
 import DiretorioParceirosModal from "./DiretorioParceirosModal.vue";
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({
   show: Boolean,
   darkMode: Boolean,
@@ -17,6 +19,7 @@ const props = defineProps({
   initialType: { type: String, default: "donation" },
   initialStep: { type: Number, default: 1 }
 });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["close", "donation-created", "completed"]);
 const ngoCnpjPresets = {
   "Mesa Brasil Sesc": "12.345.678/0001-90",
@@ -24,6 +27,7 @@ const ngoCnpjPresets = {
   "Par\xF3quia Integrar Verde": "78.901.234/0003-56",
   "ONG Sop\xE3o Solid\xE1rio": "89.012.345/0004-78"
 };
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const currentStep = ref(props.initialStep);
 const selectedType = ref(props.initialType);
 const recipientOrg = ref("Mesa Brasil Sesc");
@@ -45,6 +49,7 @@ const productExpiration = ref("");
 const generatedSHA256 = ref("");
 const { currentUser } = storeToRefs(useAppStore());
 const showPartnerDirectoryModal = ref(false);
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const getStoreCity = () => {
   const addr = currentUser.value?.address || "";
   if (addr.toLowerCase().includes("chapec\xF3") || addr.toLowerCase().includes("chapeco")) return "Chapec\xF3";
@@ -59,6 +64,7 @@ const reloadPartners = () => {
   registeredSocialPartners.value = servicoDoacoes.getSocialPartnersByProximity(getStoreCity());
   registeredDisposalPartners.value = servicoDoacoes.getDisposalPartners();
 };
+// Valores derivados das entradas e do estado para manter a apresentação sincronizada.
 const currentSelectedSocialPartner = computed(() => {
   return registeredSocialPartners.value.find((p) => p.name === recipientOrg.value) || registeredSocialPartners.value[0];
 });
@@ -94,6 +100,7 @@ const initializeFormFields = () => {
 onMounted(() => {
   initializeFormFields();
 });
+// Observa mudanças relevantes e sincroniza o estado local com os dados recebidos.
 watch(recipientOrg, (newOrg) => {
   recipientCnpj.value = ngoCnpjPresets[newOrg] || "";
 });
@@ -631,6 +638,7 @@ const onDirectoryClose = () => {
 </script>
 
 <template>
+<!-- Interface principal: orquestra o fluxo de doação ou descarte, incluindo dados, confirmação e comprovante. -->
   <q-dialog v-model="dialogOpen">
     <q-card class="wizard-card column no-wrap" :dark="darkMode">
       <!-- Cabeçalho -->
@@ -1175,7 +1183,7 @@ const onDirectoryClose = () => {
               <div class="col-6">
                 <q-btn outline no-caps color="grey-6" class="full-width" icon="arrow_back" @click="currentStep = 1" />
               </div>
-              <div class="col-6">
+              <div class="col-12 col-sm-6">
                 <q-btn
                   unelevated
                   no-caps

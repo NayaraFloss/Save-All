@@ -1,10 +1,12 @@
 <script setup>
+// Apresenta e ajusta a configuração de preços dinâmicos da loja.
 import { ref, computed } from "vue";
 import {
   DEFAULT_DYNAMIC_PRICING_CONFIG,
   DYNAMIC_PRICING_LIMITS,
   calculateDynamicPricing
 } from "../../utils/precificacaoDinamica";
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({
   lojaId: String,
   darkMode: Boolean,
@@ -12,19 +14,23 @@ const props = defineProps({
   foods: { type: Array, default: () => [] },
   initialConfig: { type: Object, default: undefined }
 });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["saved", "save-config", "trigger-disposal", "notification"]);
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const enabled = ref(props.initialConfig?.enabled ?? true);
 const faixa1Discount = ref(props.initialConfig?.faixa1Discount ?? DEFAULT_DYNAMIC_PRICING_CONFIG.faixa1Discount);
 const faixa2Discount = ref(props.initialConfig?.faixa2Discount ?? DEFAULT_DYNAMIC_PRICING_CONFIG.faixa2Discount);
 const faixa3Discount = ref(props.initialConfig?.faixa3Discount ?? DEFAULT_DYNAMIC_PRICING_CONFIG.faixa3Discount);
 const isSaved = ref(false);
 const showSimulatorModal = ref(false);
+// Valores derivados das entradas e do estado para manter a apresentação sincronizada.
 const activeConfig = computed(() => ({
   enabled: enabled.value,
   faixa1Discount: Number(faixa1Discount.value),
   faixa2Discount: Number(faixa2Discount.value),
   faixa3Discount: Number(faixa3Discount.value)
 }));
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const getFaixaBadgeProps = (index) => {
   if (props.darkMode) {
     if (index === 4) return { color: "grey-8", textColor: "grey-3" };
@@ -126,6 +132,7 @@ const calculatedInventory = computed(() => {
 </script>
 
 <template>
+<!-- Interface principal: apresenta e ajusta a configuração de preços dinâmicos da loja. -->
   <div class="pricing-root column q-gutter-y-md">
     <!-- Cabeçalho -->
     <q-card flat bordered :dark="darkMode">

@@ -489,7 +489,7 @@ const realizarSorteio = async (maxima) => {
 }
 
 .city-select {
-  min-width: 170px;
+  min-width: min(170px, 100%);
   max-width: 220px;
   background: #fff;
   border-radius: 4px;

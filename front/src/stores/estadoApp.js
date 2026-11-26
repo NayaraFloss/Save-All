@@ -1,3 +1,4 @@
+// Store central: mantém sessão, preferências, catálogo, sacola e pedidos, integrando serviços e navegação.
 import { ref, watch, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { Notify, Dark } from 'quasar'
@@ -30,11 +31,6 @@ export const useAppStore = defineStore('app', () => {
   const pedidosCarregados = ref(false)
   const cart = ref([])
   const cartStoreId = ref(null)
-  // Endereço de entrega escolhido só para o pedido em andamento. Vazio = vale o endereço do cadastro (padrão).
-  const enderecoEntrega = ref(null)
-  const definirEnderecoEntrega = (endereco) => {
-    enderecoEntrega.value = endereco && endereco.full ? { ...endereco } : null
-  }
   const cartStoreName = ref(null)
   // Sacola Surpresa montada com o máximo disponível (o cliente pediu mais do que há hoje)
   const sacolaMaxima = ref(null)
@@ -212,6 +208,7 @@ export const useAppStore = defineStore('app', () => {
       console.warn('Não foi possível atualizar o catálogo:', err)
     }
   }
+  // Inicializa a sessão e carrega os dados necessários para abrir a aplicação.
   const initApp = async () => {
     loading.value = true
     try {
@@ -239,6 +236,7 @@ export const useAppStore = defineStore('app', () => {
       pedidosCarregados.value = false
     }
   })
+  // Autentica a pessoa, prepara seus dados e direciona para a área correspondente ao perfil.
   const login = async (email, pass) => {
     loading.value = true
     error.value = null
@@ -256,6 +254,7 @@ export const useAppStore = defineStore('app', () => {
       loading.value = false
     }
   }
+  // Registra a conta, carrega seus dados e abre a área inicial do perfil.
   const signup = async (name, email, pass, role, address, extraFields) => {
     loading.value = true
     error.value = null
@@ -273,6 +272,7 @@ export const useAppStore = defineStore('app', () => {
       loading.value = false
     }
   }
+  // Encerra a sessão e limpa os dados locais que não devem persistir entre contas.
   const logout = () => {
     authService.logout()
     armazem.limpar()
@@ -282,6 +282,7 @@ export const useAppStore = defineStore('app', () => {
     setScreen('welcome')
     triggerNotification('Sess\xE3o encerrada com sucesso.', 'success')
   }
+  // Atualiza o perfil no servidor e sincroniza o estado local conforme o resultado.
   const updateProfile = async (data) => {
     if (!usuarioAtual.value) return false
     loading.value = true
@@ -313,6 +314,7 @@ export const useAppStore = defineStore('app', () => {
       loading.value = false
     }
   }
+  // Inclui o item na sacola, mantendo a associação ao estabelecimento e a quantidade.
   const addToCart = (item) => {
     // Um pedido é sempre de um estabelecimento: itens de outra loja começam um pedido novo
     if (cartStoreId.value && cartStoreId.value !== item.lojaId && cart.value.length > 0) {
@@ -361,7 +363,6 @@ export const useAppStore = defineStore('app', () => {
     }
   }
   const clearCart = () => {
-    enderecoEntrega.value = null
     cart.value = []
     cartStoreId.value = null
     cartStoreName.value = null
@@ -370,6 +371,7 @@ export const useAppStore = defineStore('app', () => {
   const getCartSubtotal = () => {
     return cart.value.reduce((acc, item) => acc + item.price * item.quantity, 0)
   }
+  // Consulta o catálogo de alimentos e atualiza o estado apresentado pelas telas.
   const loadFoods = async (lojaId, cat) => {
     loading.value = true
     try {
@@ -465,6 +467,7 @@ export const useAppStore = defineStore('app', () => {
     // Devolve o item como o servidor gravou (quem só testa "if (salvou)" continua funcionando)
     return salvo || true
   }
+  // Consulta os pedidos do perfil atual e atualiza o acompanhamento na store.
   const loadOrders = async () => {
     if (!usuarioAtual.value) return
     loading.value = true
@@ -483,6 +486,7 @@ export const useAppStore = defineStore('app', () => {
       loading.value = false
     }
   }
+  // Valida a sacola, monta os valores do pedido e envia a criação ao serviço.
   const submitOrder = async (formaPagamento, pontosUsados, descontoPontos, deliveryFeeOverride) => {
     if (!usuarioAtual.value) throw new Error('\xC9 necess\xE1rio estar logado.')
     if (cart.value.length === 0) throw new Error('Sua sacola est\xE1 vazia.')
@@ -501,16 +505,14 @@ export const useAppStore = defineStore('app', () => {
         nomeLoja: cartStoreName.value,
         items: cart.value,
         // Sacola Surpresa: a visão do cliente esconde a loja e os produtos
-        ...(cart.value.length > 0 && cart.value.every((item) => item.surpresa)
-          ? { surpresa: true }
-          : {}),
+        ...(cart.value.length > 0 && cart.value.every((item) => item.surpresa) ? { surpresa: true } : {}),
         subtotal,
         taxaEntrega,
         descontoPontos,
         pontosUsados,
         total,
         formaPagamento,
-        address: enderecoEntrega.value?.full || usuarioAtual.value.address || '',
+        address: usuarioAtual.value.address || '',
       }
       const result = await orderService.createOrder(payload)
       clearCart()
@@ -531,6 +533,7 @@ export const useAppStore = defineStore('app', () => {
       loading.value = false
     }
   }
+  // Persiste a mudança de situação do pedido e recarrega os dados atualizados.
   const updateOrderStatus = async (id, newStatus, extraFields) => {
     loading.value = true
     try {
@@ -554,6 +557,7 @@ export const useAppStore = defineStore('app', () => {
       loading.value = false
     }
   }
+  // Confere a elegibilidade e envia a avaliação do pedido.
   const submitOrderEvaluation = async (id, evaluation) => {
     const targetOrder = orders.value.find((o) => o.id === id)
     if (targetOrder && !canEvaluateOrder(targetOrder)) {
@@ -570,8 +574,7 @@ export const useAppStore = defineStore('app', () => {
         usuarioAtual.value = freshUser
       }
       // Avaliação enviada: fecha o pop-up global na hora (o pedido já tem nota e não é oferecido de novo)
-      if (pedidoParaAvaliar.value && String(pedidoParaAvaliar.value.id) === String(id))
-        fecharAvaliacao()
+      if (pedidoParaAvaliar.value && String(pedidoParaAvaliar.value.id) === String(id)) fecharAvaliacao()
       triggerNotification(
         'Avalia\xE7\xE3o enviada com sucesso! Obrigado pelo feedback \u{1F331}',
         'success',
@@ -634,8 +637,6 @@ export const useAppStore = defineStore('app', () => {
     removeFromCart,
     updateCartQty,
     clearCart,
-    enderecoEntrega,
-    definirEnderecoEntrega,
     getCartSubtotal,
     loadFoods,
     addNewFoodItem,

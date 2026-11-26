@@ -1,13 +1,16 @@
 <script setup>
+// Exibe alertas de validade e permite encaminhar itens vencidos para doação ou descarte.
 import { computed, ref, watch } from "vue";
 import { resumoEstoque } from "../../utils/lotesVencidos";
 import { ordenarPorUrgenciaDeVencimento, calcularPrecificacaoDinamica } from "../../utils/precificacaoDinamica";
 
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({
   foods: { type: Array, default: () => [] },
   lojaId: { type: String, default: "" },
   modoEscuro: Boolean
 });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["edit-item", "destinar-item", "destinar-itens"]);
 
 // Itens ativos da loja, do mais perto de vencer para o mais longe.
@@ -30,6 +33,7 @@ const vencidos = computed(() =>
 );
 // Seleção de vários vencidos para doar ou descartar juntos
 const selecionados = ref([]);
+// Observa mudanças relevantes e sincroniza o estado local com os dados recebidos.
 watch(vencidos, (lista) => {
   const ids = new Set(lista.map((i) => i.id));
   selecionados.value = selecionados.value.filter((id) => ids.has(id));
@@ -38,6 +42,7 @@ const todosSelecionados = computed({
   get: () => vencidos.value.length > 0 && selecionados.value.length === vencidos.value.length,
   set: (marcar) => (selecionados.value = marcar ? vencidos.value.map((i) => i.id) : []),
 });
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const destinarSelecionados = () => {
   emit("destinar-itens", vencidos.value.filter((i) => selecionados.value.includes(i.id)));
 };
@@ -56,6 +61,7 @@ const prazo = (calc) => {
 </script>
 
 <template>
+<!-- Interface principal: exibe alertas de validade e permite encaminhar itens vencidos para doação ou descarte. -->
   <q-card flat bordered :dark="modoEscuro">
     <q-card-section class="q-pb-sm">
       <div class="row items-center justify-between no-wrap">

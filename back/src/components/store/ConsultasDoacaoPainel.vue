@@ -1,11 +1,16 @@
 <script setup>
+// Acompanha consultas de doação e oferece ações conforme a resposta e a situação de cada oferta.
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import { servicoDoacoes } from "../../services/servicoDoacoes";
 import { useAppStore } from "../../stores/estadoApp";
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 defineProps({ lojaId: String, modoEscuro: Boolean });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["open-wizard", "select-offer", "proceed-donation", "doar-outra-entidade"]);
 const { triggerNotification } = useAppStore();
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const offers = ref([]);
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const loadOffers = () => {
   offers.value = servicoDoacoes.getDonationOffers();
 };
@@ -128,6 +133,7 @@ const confirmarEntrega = () => {
   }
 };
 
+// Valores derivados das entradas e do estado para manter a apresentação sincronizada.
 const ofertasAguardando = computed(() => offers.value.filter((o) => o.status === "pending_inquiry"));
 const ofertasRespondidas = computed(() => offers.value.filter((o) => o.status !== "pending_inquiry"));
 
@@ -144,6 +150,7 @@ const stats = computed(() => {
 </script>
 
 <template>
+<!-- Interface principal: acompanha consultas de doação e oferece ações conforme a resposta e a situação de cada oferta. -->
   <q-card flat bordered class="consultas-painel text-left">
     <!-- Cabeçalho -->
     <q-card-section class="row items-center justify-between no-wrap q-pb-sm">

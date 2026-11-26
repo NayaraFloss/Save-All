@@ -236,19 +236,19 @@ const esgTotals = computed(() => {
                 <div class="text-subtitle2 text-weight-bold q-my-xs">{{ log.foodName }}</div>
 
                 <div class="row q-col-gutter-xs caixa-metrica q-pa-xs rounded-borders text-caption text-grey-6">
-                  <div class="col-3">
+                  <div class="col-6 col-sm-3">
                     <span>Peso Tratado</span>
                     <span class="text-weight-bold text-teal mono block">{{ log.weightEstimatedKg }} kg</span>
                   </div>
-                  <div class="col-3">
+                  <div class="col-6 col-sm-3">
                     <span>Adubo Gerado</span>
                     <span class="text-weight-bold text-teal mono block">{{ (log.weightEstimatedKg * 0.35).toFixed(1) }} kg</span>
                   </div>
-                  <div class="col-3">
+                  <div class="col-6 col-sm-3">
                     <span>CO₂ Evitado</span>
                     <span class="text-weight-bold text-positive mono block">{{ (log.weightEstimatedKg * 2.5).toFixed(1) }} kg</span>
                   </div>
-                  <div class="col-3">
+                  <div class="col-6 col-sm-3">
                     <span>Água Poupada</span>
                     <span class="text-weight-bold text-blue mono block">{{ Math.round(log.weightEstimatedKg * 130) }} L</span>
                   </div>
@@ -362,7 +362,7 @@ const esgTotals = computed(() => {
             <div>
               <div class="text-caption text-weight-bold text-grey-6 text-uppercase q-mb-xs">Auditar Entrada Composteira</div>
               <div class="row q-col-gutter-sm">
-                <div class="col-6">
+                <div class="col-12 col-sm-6">
                   <q-btn
                     class="full-width"
                     no-caps
@@ -374,7 +374,7 @@ const esgTotals = computed(() => {
                     @click="signatureTypeChoice = 'digital'"
                   />
                 </div>
-                <div class="col-6">
+                <div class="col-12 col-sm-6">
                   <q-btn
                     class="full-width"
                     no-caps

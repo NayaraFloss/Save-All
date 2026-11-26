@@ -1,14 +1,19 @@
 <script setup>
+// Apresenta o inventário publicado e encaminha as ações disponíveis sobre os itens.
 import { computed } from "vue";
 import { loteVencido, resumoEstoque } from "../../utils/lotesVencidos";
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({ darkMode: Boolean, foods: { type: Array, default: () => [] }, lojaId: String });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["edit-item", "add-item-click", "remove-item"]);
+// Valores derivados das entradas e do estado para manter a apresentação sincronizada.
 const myFoods = computed(() => {
   return props.foods.filter((f) => f.lojaId === props.lojaId);
 });
 </script>
 
 <template>
+<!-- Interface principal: apresenta o inventário publicado e encaminha as ações disponíveis sobre os itens. -->
   <div class="column q-gutter-y-md inventory-root">
     <!-- Header de Controle e Estatísticas -->
     <q-card flat bordered>

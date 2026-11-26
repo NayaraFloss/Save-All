@@ -1,8 +1,10 @@
 <script setup>
+// Organiza indicadores ESG e relatórios consolidados para consulta e exportação.
 import { ref, computed } from "vue";
 import { storeToRefs } from "pinia";
 import { useAppStore } from "stores/estadoApp";
 import { jsPDF } from "jspdf";
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({
   lojaId: String,
   nomeLoja: String,
@@ -11,8 +13,10 @@ const props = defineProps({
   activeReportSubTabSetting: String
 });
 const { orders, foods } = storeToRefs(useAppStore());
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const activeReportSubTab = ref(props.activeReportSubTabSetting || "summary");
 const selectedLogDetails = ref(null);
+// Valores derivados das entradas e do estado para manter a apresentação sincronizada.
 const logDetailsOpen = computed({
   get: () => !!selectedLogDetails.value,
   set: (v) => {
@@ -93,6 +97,7 @@ const co2Prevented = computed(() => {
 const waterSafeguarded = computed(() => {
   return Math.round(totalWeightSaved.value * 130);
 });
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const handleDownloadPdfCertificate = (log) => {
   if (!log) return;
   const isDonation = log.type === "donation";
@@ -494,6 +499,7 @@ const handleGenerateConsolidatedReport = () => {
 </script>
 
 <template>
+<!-- Interface principal: organiza indicadores ESG e relatórios consolidados para consulta e exportação. -->
   <div class="column q-gutter-y-md text-left">
     <!-- RELATÓRIO MENSAL INTEGRADO DE SUSTENTABILIDADE CONTAINER -->
     <q-card flat bordered>
@@ -1082,10 +1088,10 @@ const handleGenerateConsolidatedReport = () => {
 
           <!-- Action Buttons -->
           <div class="row q-col-gutter-sm">
-            <div class="col-6">
+            <div class="col-12 col-sm-6">
               <q-btn outline no-caps color="grey-7" label="Cancelar" class="full-width" type="button" @click="showCustomReportModal = false" />
             </div>
-            <div class="col-6">
+            <div class="col-12 col-sm-6">
               <q-btn
                 unelevated
                 no-caps

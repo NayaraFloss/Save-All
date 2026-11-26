@@ -34,6 +34,37 @@ body {
 .q-field.col, .q-field.col-grow, .row.no-wrap > .q-field { min-width: 0; }
 .q-field__native, .q-field__control { min-width: 0; }
 
+// ---------------------------------------------------------------
+// Celular: nada pode passar da largura da tela
+// ---------------------------------------------------------------
+// Colunas do grid do Quasar podem encolher (texto longo não empurra a linha para fora)
+.row > .col, .row > [class*="col-"], .row > .col-auto { min-width: 0; }
+// Cartões, banners e itens de lista respeitam a largura disponível
+.q-card, .q-banner, .q-item, .q-list { max-width: 100%; }
+.q-item__label, .q-banner__content, .q-card__section { overflow-wrap: anywhere; }
+// Badges e chips com texto longo quebram linha
+.q-badge { max-width: 100%; white-space: normal; height: auto; }
+.q-chip { max-width: 100%; }
+.q-chip__content { min-width: 0; }
+// Tabelas e conteúdo largo rolam dentro do próprio quadro
+.q-table__container, .q-table__middle { max-width: 100%; }
+.q-table__middle { overflow-x: auto; }
+// Abas rolam lateralmente em vez de cortar
+.q-tabs { max-width: 100%; }
+
+@media (max-width: 599px) {
+  // Janelas (q-dialog) usam quase toda a largura do celular
+  .q-dialog__inner--minimized { padding: 8px; }
+  .q-dialog__inner--minimized > div { max-width: calc(100vw - 16px) !important; }
+  // Menus suspensos nunca saem da tela
+  .q-menu { max-width: calc(100vw - 16px) !important; }
+  // Linhas "no-wrap" com botões quebram no celular quando marcadas como responsivas
+  .wrap-xs { flex-wrap: wrap !important; }
+  // Títulos menores
+  .text-h5 { font-size: 1.25rem; line-height: 1.6rem; }
+  .text-h6 { font-size: 1.05rem; line-height: 1.5rem; }
+}
+
 // Conteúdo de q-scroll-area nunca passa da largura da área (evita corte à direita no celular)
 .q-scrollarea__content { max-width: 100% !important; width: 100%; }
 

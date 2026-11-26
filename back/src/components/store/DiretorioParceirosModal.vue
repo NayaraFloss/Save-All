@@ -1,10 +1,14 @@
 <script setup>
+// Pesquisa e seleciona parceiros disponíveis para apoiar a destinação de alimentos.
 import { ref, computed, onMounted } from "vue";
 import { servicoDoacoes } from "../../services/servicoDoacoes";
 import { useAppStore } from "../../stores/estadoApp";
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({ show: Boolean, modoEscuro: Boolean, initialTab: { type: String, default: "entidades" } });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["close", "select-partner"]);
 const { triggerNotification } = useAppStore();
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const activeTab = ref("social");
 const searchQuery = ref("");
 const filterStatus = ref("all");
@@ -12,6 +16,7 @@ const currentStoreCity = ref(props.storeCity || "Pinhalzinho");
 const socialPartners = ref([]);
 const disposalPartners = ref([]);
 const selectedPartnerToReview = ref(null);
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const reloadData = () => {
   socialPartners.value = servicoDoacoes.getSocialPartners();
   disposalPartners.value = servicoDoacoes.getDisposalPartners();
@@ -20,6 +25,7 @@ onMounted(() => {
   reloadData();
   window.addEventListener("saveall_social_partners_updated", reloadData);
 });
+// Valores derivados das entradas e do estado para manter a apresentação sincronizada.
 const proximitySocialList = computed(() => {
   let list = socialPartners.value;
   if (filterStatus.value === "pending") {
@@ -233,6 +239,7 @@ const treatmentOptions = [
 </script>
 
 <template>
+<!-- Interface principal: pesquisa e seleciona parceiros disponíveis para apoiar a destinação de alimentos. -->
   <q-dialog :model-value="true" @update:model-value="emit('close')">
     <q-card id="modal-diretorio-parceiros" class="dpm-card column no-wrap">
       <!-- HEADER -->

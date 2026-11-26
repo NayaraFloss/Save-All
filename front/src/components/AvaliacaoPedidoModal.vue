@@ -30,8 +30,11 @@ watch(notaComida, (newVal) => {
   if (newVal >= 3) {
     validationErrors.value.food = void 0;
   }
+  // 1 estrela marca a reclamação sozinha; 3 ou mais desmarcam (reclamação só com nota 1 ou 2)
   if (newVal === 1) {
     reclamacaoComida.value = true;
+  } else if (newVal >= 3) {
+    reclamacaoComida.value = false;
   }
 });
 watch(comentarioComida, (newVal) => {
@@ -43,7 +46,7 @@ watch(() => props.order, (ord) => {
   if (ord) {
     notaComida.value = ord.notaComida || 5;
     comentarioComida.value = ord.comentarioComida || "";
-    reclamacaoComida.value = ord.reclamacaoComida || ord.notaComida === 1;
+    reclamacaoComida.value = notaComida.value <= 2 && (!!ord.reclamacaoComida || notaComida.value === 1);
     validationErrors.value = {};
     submittedAttempt.value = false;
   }
@@ -87,7 +90,7 @@ const handleSubmit = async () => {
     await submitOrderEvaluation(props.order.id, {
       notaComida: notaComida.value,
       comentarioComida: comentarioComida.value.trim(),
-      reclamacaoComida: reclamacaoComida.value || notaComida.value === 1
+      reclamacaoComida: notaComida.value === 1 || (reclamacaoComida.value && notaComida.value <= 2)
     });
     emit("submitted");
     emit("close");
@@ -197,7 +200,7 @@ const handleSubmit = async () => {
                 v-model="reclamacaoComida"
                 dense
                 color="negative"
-                :disable="isEvaluationExpired"
+                :disable="isEvaluationExpired || notaComida >= 3 || notaComida === 1"
                 :dark="isDark"
                 label="Registrar Reclamação Formal da Comida (Aviso de Qualidade)"
                 class="text-caption text-weight-medium text-negative"

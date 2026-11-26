@@ -1,12 +1,17 @@
 <script setup>
-import { ref, onMounted, watch } from "vue";
+// Permite desenhar, limpar e confirmar uma assinatura no canvas, inclusive em telas sensíveis ao toque.
+import { ref, onMounted, onBeforeUnmount, watch } from "vue";
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({ modelValue: String, label: String, modoEscuro: Boolean, initialImage: String });
-const emit = defineEmits(["update:modelValue"]);
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
+const emit = defineEmits(["update:modelValue", "save", "clear"]);
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const canvasRef = ref(null);
 const isDrawing = ref(false);
 const hasDrawn = ref(false);
 const showExisting = ref(!!props.initialImage);
 let ctx = null;
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const initCanvas = () => {
   if (!canvasRef.value) return;
   const canvas = canvasRef.value;
@@ -21,11 +26,25 @@ const initCanvas = () => {
     ctx.lineJoin = "round";
   }
 };
+// Celular girou ou a janela mudou de tamanho: reajusta o canvas (senão o traço sai deslocado)
+let observador = null;
+let larguraAnterior = 0;
 onMounted(() => {
   if (!showExisting.value) {
     setTimeout(initCanvas, 150);
   }
+  if (typeof ResizeObserver !== "undefined") {
+    observador = new ResizeObserver(() => {
+      const largura = Math.round(canvasRef.value?.getBoundingClientRect().width || 0);
+      if (!largura || largura === larguraAnterior) return;
+      larguraAnterior = largura;
+      if (!hasDrawn.value) initCanvas();
+    });
+    if (canvasRef.value) observador.observe(canvasRef.value);
+  }
 });
+onBeforeUnmount(() => observador?.disconnect());
+// Observa mudanças relevantes e sincroniza o estado local com os dados recebidos.
 watch(() => props.initialImage, (newVal) => {
   showExisting.value = !!newVal;
   if (!newVal) {
@@ -46,9 +65,12 @@ const getCoordinates = (event) => {
     clientX = touch.clientX;
     clientY = touch.clientY;
   }
+  // Converte da posição na tela para a escala interna do canvas
+  const escalaX = rect.width ? canvas.width / rect.width : 1;
+  const escalaY = rect.height ? canvas.height / rect.height : 1;
   return {
-    x: clientX - rect.left,
-    y: clientY - rect.top
+    x: (clientX - rect.left) * escalaX,
+    y: (clientY - rect.top) * escalaY
   };
 };
 const startDrawing = (event) => {
@@ -94,6 +116,7 @@ const handleRedraw = () => {
 </script>
 
 <template>
+<!-- Interface principal: permite desenhar, limpar e confirmar uma assinatura no canvas, inclusive em telas sensíveis ao toque. -->
   <div class="column q-gutter-y-xs">
     <div v-if="label" class="text-caption text-uppercase text-weight-bold text-grey-7 pad-label">
       {{ label }}
@@ -147,7 +170,7 @@ const handleRedraw = () => {
       <q-separator />
 
       <!-- Draw Actions -->
-      <q-card-actions align="between" class="q-pa-sm">
+      <q-card-actions align="between" class="q-pa-sm acoes-assinatura">
         <q-btn flat dense no-caps color="grey-7" icon="replay" label="Limpar Tela" type="button" @click="handleClear" />
         <q-btn
           unelevated
@@ -177,6 +200,10 @@ const handleRedraw = () => {
   touch-action: none;
   cursor: crosshair;
   background: rgba(255, 255, 255, 0.4);
+}
+.acoes-assinatura {
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .canvas-hint {
   pointer-events: none;

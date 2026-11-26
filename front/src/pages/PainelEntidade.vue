@@ -352,7 +352,7 @@ const esgTotals = computed(() => {
 
                 <!-- Ações: aceitar / recusar -->
                 <div class="row q-col-gutter-sm q-mt-xs">
-                  <div class="col-6">
+                  <div class="col-12 col-sm-6">
                     <q-btn
                       unelevated
                       no-caps
@@ -363,7 +363,7 @@ const esgTotals = computed(() => {
                       @click="openRespondInquiry(offer)"
                     />
                   </div>
-                  <div class="col-6">
+                  <div class="col-12 col-sm-6">
                     <q-btn
                       outline
                       no-caps
@@ -606,7 +606,7 @@ const esgTotals = computed(() => {
 
           <!-- Escolha -->
           <div class="row q-col-gutter-sm">
-            <div class="col-6">
+            <div class="col-12 col-sm-6">
               <q-btn
                 :unelevated="entityResponseChoice === 'accept'"
                 :outline="entityResponseChoice !== 'accept'"
@@ -617,7 +617,7 @@ const esgTotals = computed(() => {
                 @click="entityResponseChoice = 'accept'"
               />
             </div>
-            <div class="col-6">
+            <div class="col-12 col-sm-6">
               <q-btn
                 :unelevated="entityResponseChoice === 'reject'"
                 :outline="entityResponseChoice !== 'reject'"
@@ -684,7 +684,7 @@ const esgTotals = computed(() => {
           <div class="q-gutter-y-sm">
             <div class="text-caption text-uppercase text-weight-bold text-grey-7">Tipo de Assinatura Auditoria</div>
             <div class="row q-col-gutter-sm">
-              <div class="col-6">
+              <div class="col-12 col-sm-6">
                 <q-btn
                   :unelevated="signatureTypeChoice === 'digital'"
                   :outline="signatureTypeChoice !== 'digital'"
@@ -696,7 +696,7 @@ const esgTotals = computed(() => {
                   @click="signatureTypeChoice = 'digital'"
                 />
               </div>
-              <div class="col-6">
+              <div class="col-12 col-sm-6">
                 <q-btn
                   :unelevated="signatureTypeChoice === 'drawn'"
                   :outline="signatureTypeChoice !== 'drawn'"

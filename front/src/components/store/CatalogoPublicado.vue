@@ -1,7 +1,10 @@
 <script setup>
+// Apresenta o catálogo da loja e encaminha ações de edição, retirada ou destinação de itens.
 import { computed, ref } from "vue";
 import { resumoEstoque } from "../../utils/lotesVencidos";
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({ modoEscuro: Boolean, foods: { type: Array, default: () => [] }, lojaId: String });
+// Eventos emitidos para o componente pai executar as ações fora desta interface.
 const emit = defineEmits(["edit-item", "add-item-click", "inactivate-item", "publish-item", "destinar-item"]);
 // Item inativo continua cadastrado, mas não aparece para os clientes.
 const estaInativo = (food) => food.status === "inactive";
@@ -22,6 +25,7 @@ const situacaoValidade = (valor) => {
   if (dias <= 2) return { texto: `Vence em ${dias} dia(s)`, cor: "warning" };
   return { texto: `Vence em ${dias} dias`, cor: "positive" };
 };
+// Valores derivados das entradas e do estado para manter a apresentação sincronizada.
 const myFoods = computed(() => {
   return props.foods.filter((f) => f.lojaId === props.lojaId);
 });
@@ -66,6 +70,7 @@ const limparFiltros = () => {
 </script>
 
 <template>
+<!-- Interface principal: apresenta o catálogo da loja e encaminha ações de edição, retirada ou destinação de itens. -->
   <div class="column q-gutter-y-md inventory-root">
     <!-- Header de Controle e Estatísticas -->
     <q-card flat bordered>

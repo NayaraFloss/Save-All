@@ -1,3 +1,4 @@
+// Store de mensagens: compõe avisos por perfil, acompanha novidades e sincroniza a leitura.
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useAppStore } from './estadoApp'
@@ -25,6 +26,7 @@ export const useMensageriaStore = defineStore('mensageria', () => {
         new Date(b.criadaEm) - new Date(a.criadaEm),
     )
 
+  // Recalcula as mensagens do perfil e identifica novidades sem repetir avisos já conhecidos.
   const atualizar = () => {
     const usuario = app.usuarioAtual
     if (!usuario?.id) {
@@ -75,6 +77,7 @@ export const useMensageriaStore = defineStore('mensageria', () => {
       .map((f) => [f.id, f.precoComDesconto, f.quantity, f.status, f.dataValidade].join('|'))
       .join(';')
   let sincronizando = false
+  // Atualiza os alimentos no servidor e recalcula as mensagens relacionadas ao catálogo.
   const sincronizar = async () => {
     const usuario = app.usuarioAtual
     const papelComAlimentos = usuario?.role === 'client' || usuario?.role === 'store'
@@ -92,6 +95,7 @@ export const useMensageriaStore = defineStore('mensageria', () => {
     atualizar()
   }
 
+  // Persiste a leitura de todas as mensagens e reflete a mudança imediatamente na interface.
   const marcarTodasLidas = () => {
     const usuario = app.usuarioAtual
     if (!usuario?.id) return
@@ -102,6 +106,7 @@ export const useMensageriaStore = defineStore('mensageria', () => {
     mensagens.value = mensagens.value.map((m) => ({ ...m, lida: true }))
   }
 
+  // Persiste a leitura de uma mensagem específica e atualiza a lista local.
   const marcarLida = (id) => {
     const usuario = app.usuarioAtual
     if (!usuario?.id) return
@@ -109,6 +114,7 @@ export const useMensageriaStore = defineStore('mensageria', () => {
     mensagens.value = ordenar(mensagens.value.map((m) => (m.id === id ? { ...m, lida: true } : m)))
   }
 
+  // Remove a mensagem dispensada do armazenamento e da lista exibida.
   const dispensar = (id) => {
     const usuario = app.usuarioAtual
     if (!usuario?.id) return

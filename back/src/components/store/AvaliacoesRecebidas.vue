@@ -1,6 +1,8 @@
 <script setup>
+// Reúne e resume as avaliações de pedidos e doações recebidas pela loja.
 import { computed, ref } from "vue";
 
+// Entradas recebidas do componente pai que configuram os dados e opções desta tela.
 const props = defineProps({
   orders: { type: Array, default: () => [] },
   // Doações entregues já avaliadas pela entidade (campo avaliacaoEntidade)
@@ -8,6 +10,7 @@ const props = defineProps({
   modoEscuro: Boolean
 });
 
+// Estado local reativo usado para acompanhar seleções, formulários e etapas da interface.
 const somenteReclamacoes = ref(false);
 
 // Avaliações dos clientes (pedidos) e das entidades (doações), da mais recente para a mais antiga.
@@ -38,6 +41,7 @@ const deDoacoes = computed(() =>
 const avaliacoes = computed(() =>
   [...dePedidos.value, ...deDoacoes.value].sort((a, b) => new Date(b.data || 0) - new Date(a.data || 0)),
 );
+// Ações da tela validam a interação e encaminham as alterações ou eventos necessários.
 const ehReclamacao = (o) => o.reclamacaoComida || o.notaComida === 1;
 const lista = computed(() => (somenteReclamacoes.value ? avaliacoes.value.filter(ehReclamacao) : avaliacoes.value));
 const media = computed(() => {
@@ -56,6 +60,7 @@ const corNota = (n) => (n >= 4 ? "positive" : n === 3 ? "warning" : "negative");
 </script>
 
 <template>
+<!-- Interface principal: reúne e resume as avaliações de pedidos e doações recebidas pela loja. -->
   <q-card flat bordered class="q-mb-md" :dark="modoEscuro">
     <q-card-section class="q-gutter-y-sm">
       <div class="row items-center justify-between no-wrap">

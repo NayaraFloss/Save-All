@@ -301,14 +301,18 @@ export async function recalcularReputacao(db, { lojaId }) {
       rows: [r],
     } = await consultar(
       // Nota geral do estabelecimento: avaliações dos clientes (pedidos) + avaliações das entidades (doações entregues)
-      `WITH notas AS (
-         SELECT nota_comida AS nota, (COALESCE(reclamacao_comida, FALSE) OR nota_comida = 1) AS recl
-           FROM pedidos WHERE loja_id = $1
+      `WITH notas_brutas AS (
+         SELECT nota_comida AS nota, COALESCE(reclamacao_comida, FALSE) AS marcada
+           FROM pedidos WHERE loja_id = $1 AND nota_comida IS NOT NULL
          UNION ALL
          SELECT (extras->'avaliacaoEntidade'->>'notaComida')::int,
-                (COALESCE((extras->'avaliacaoEntidade'->>'reclamacaoComida')::boolean, FALSE)
-                 OR (extras->'avaliacaoEntidade'->>'notaComida')::int = 1)
+                COALESCE((extras->'avaliacaoEntidade'->>'reclamacaoComida')::boolean, FALSE)
            FROM doacoes WHERE loja_id = $1 AND extras ? 'avaliacaoEntidade'
+                AND (extras->'avaliacaoEntidade'->>'notaComida') IS NOT NULL
+       ),
+       -- Reclamação formal = nota 1, ou nota 2 com a reclamação marcada (nota 3+ nunca conta)
+       notas AS (
+         SELECT nota, (nota = 1 OR (marcada AND nota <= 2)) AS recl FROM notas_brutas
        )
        SELECT ROUND(AVG(nota)::numeric, 1) AS media, COUNT(nota)::int AS qtd,
               COUNT(*) FILTER (WHERE recl)::int AS recl
@@ -491,7 +495,11 @@ export async function atualizar(req, res) {
           texto(c.comentarioComida, { campo: "comentário", max: 500 }),
         );
       if (c.reclamacaoComida !== undefined)
-        add("reclamacao_comida", !!c.reclamacaoComida || notaComida === 1);
+        // Reclamação formal só com nota 1 (automática) ou nota 2 marcada
+        add(
+          "reclamacao_comida",
+          notaComida === 1 || (!!c.reclamacaoComida && (notaComida || 5) <= 2),
+        );
       add("avaliado_em", new Date().toISOString());
       reputacao = { lojaId: p.loja_id };
     }
